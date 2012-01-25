@@ -59,6 +59,7 @@ SOURCES =					\
   $(SCRIPTS_SOURCES)				\
   $(ECMASCRIPT_LANG_SOURCES)			\
   $(ELISP_LANG_SOURCES)				\
+  $(PYTHON3_LANG_SOURCES)			\
   $(BRAINFUCK_LANG_SOURCES)			\
   $(LIB_SOURCES)				\
   $(WEB_SOURCES)
@@ -145,6 +146,11 @@ ELISP_LANG_SOURCES =				\
   language/elisp/runtime/macros.scm		\
   language/elisp/runtime/subrs.scm		\
   language/elisp/spec.scm
+
+PYTHON3_LANG_SOURCES = \
+  language/python3/parse.scm			\
+  language/python3/compile-tree-il.scm		\
+  language/python3/spec.scm
 
 BRAINFUCK_LANG_SOURCES =			\
   language/brainfuck/parse.scm			\
