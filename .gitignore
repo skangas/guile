@@ -12,6 +12,8 @@ config.guess
 config.status
 config.log
 config.h
+*.html
+*.pdf
 *.doc
 *.x
 *.lo
