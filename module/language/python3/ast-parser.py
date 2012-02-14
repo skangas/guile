@@ -185,8 +185,8 @@ def print_expr(expr):
 
   if t == ast.BoolOp:
     print_boolop(expr)
-  # elif t == ast.BinOp:
-  #   print_binop(expr)
+  elif t == ast.BinOp:
+    print_binop(expr)
   # elif t == ast.UnaryOp:
   #   print_UnaryOp(expr)
   # elif t == ast.Lambda:
@@ -241,6 +241,58 @@ def print_expr(expr):
   else:
     printl(" no match in print_expr: ", t)
 
+def print_boolop(expr):
+  def print_op(op):
+    t = type(op)
+    if t == ast.And:
+      printl("And ")
+    elif t == ast.Or:
+      printl("Or ")
+    else:
+      raise NotImplementedError("No match :" + str(op))
+  printl("(<bool-op> ")
+  print_op(expr.op)
+  printl("(")
+  print_list(print_expr, expr.values)
+  printl("))")
+  
+def print_binop(expr):
+  def print_op(op):
+    t = type(op)
+    if t == ast.Add:
+      printl("Add ")
+    elif t == ast.Sub:
+      printl("Sub ")
+    elif t == ast.Mult:
+      printl("Mult ")
+    elif t == ast.Div:
+      printl("Div ")
+    elif t == ast.Mod:
+      printl("Mod ")
+    elif t == ast.Pow:
+      printl("Pow ")
+    elif t == ast.LShift:
+      printl("LShift ")
+    elif t == ast.RShift:
+      printl("RShift ")
+    elif t == ast.BitOr:
+      printl("BitOr ")
+    elif t == ast.BitXor:
+      printl("BitXor ")
+    elif t == ast.BitAnd:
+      printl("BitAnd ")
+    elif t == ast.FloorDiv:
+      printl("FloorDiv ")
+    else:
+      raise NotImplementedError("No match :" + str(op))
+    
+  printl("(<bin-op> ")
+  print_op(expr.op)
+  print_list(print_expr, [expr.left, expr.right])
+  printl(")")
+  
+  # BinOp(expr left, operator op, expr right)
+
 def print_expr_context(ctx):
   t = type(ctx)
   if t == ast.Load:
@@ -290,7 +342,7 @@ def print_num(expr):
   printl(")")
 
 def print_str(expr):
-  printl("(<str> \"", expr.s, "\")", sep = "")
+  printl('(<str> "%s")' % expr.s)
 
 def print_attribute(expr):
   printl("(<attribute> ")
