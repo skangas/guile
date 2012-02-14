@@ -67,8 +67,8 @@ def print_stmt(stmt):
         print_classdef(stmt)
     elif t == ast.Return:
         print_return(stmt)
-    # elif t == ast.Delete:
-    #     print_delete(stmt)
+    elif t == ast.Delete:
+        print_delete(stmt)
     elif t == ast.Assign:
         print_assign(stmt)
     # elif t == ast.AugAssign:
@@ -111,7 +111,7 @@ def print_stmt(stmt):
     #     print_continue(stmt)
 
     else:
-        printl(" no match in print_stmt: ", type(stmt))
+        raise NotImplementedError("No match :" + str(stmt))
 
 # todo
 def print_fundef(stmt):
@@ -153,6 +153,11 @@ def print_return(ret):
         printl("(<return> ")
         print_expr(ret.value)
         printl(")")
+
+def print_delete(d):
+    printl("(<delete> (")
+    print_list(print_expr, d.targets, sep=") (")
+    printl("))")
 
 def print_if(stmt):
     printl("(<if> ")
@@ -239,7 +244,7 @@ def print_expr(expr):
     elif expr == None:
         printl("None")
     else:
-        printl(" no match in print_expr: ", t)
+        raise NotImplementedError("No match :" + str(expr))
 
 def print_boolop(expr):
     def print_op(op):
@@ -394,6 +399,8 @@ def print_cmpop(comp):
         printl("In")
     elif t == ast.NotIn:
         printl("NotIn")
+    else:
+        raise NotImplementedError("No match :" + str(expr))
 
 def print_args(args):
     printl("(<arguments> (")
