@@ -33,16 +33,25 @@ to standard output. The produced AST has a similar representation as the
 AST defined here:
     http://docs.python.org/py3k/library/ast.html
 
-Takes one argument, the python file, and prints the ast to the standard output.\
+Given zero arguments, this module reads python source code from standard
+input, otherwise it's only argument is the path to a python file. The
+code is parsed and then translated into a representation of the python
+ast in scheme.\
 """
 import os, sys, ast
 
 def main(argv):
-    pyfile = argv[1]
-    with open(pyfile, 'r') as f:
+    if len(argv) < 2:
+      pyfile = sys.stdin
+      astree = ast.parse(pyfile.read())
+    elif argv[1] == "--help" or argv[1] == "-h":
+      print(__doc__)
+      exit(1)
+    else:
+      pyfile = argv[1]
+      with open(pyfile, 'r') as f:
         astree = ast.parse(f.read(), pyfile)
 
-    # print(ast.dump(astree), "\n\n")
     print_mod(astree)
 
 # In the python documentation mod can also be "Interactive",
@@ -260,7 +269,7 @@ def print_boolop(expr):
     printl("(")
     print_list(print_expr, expr.values)
     printl("))")
-    
+
 def print_binop(expr):
     def print_op(op):
         t = type(op)
@@ -290,12 +299,12 @@ def print_binop(expr):
             printl("FloorDiv ")
         else:
             raise NotImplementedError("No match :" + str(op))
-        
+
     printl("(<bin-op> ")
     print_op(expr.op)
     print_list(print_expr, [expr.left, expr.right])
     printl(")")
-    
+
     # BinOp(expr left, operator op, expr right)
 
 def print_expr_context(ctx):
@@ -447,8 +456,9 @@ def print_list(fun, elems, sep=" "):
         fun(e)
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        main(sys.argv)
-    else:
-        print(__doc__)
+    main(sys.argv)
+    # if len(sys.argv) > 1:
+    #   main(sys.argv)
+    # else:
+    #   print(__doc__)
 
