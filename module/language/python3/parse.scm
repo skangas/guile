@@ -26,19 +26,17 @@
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 lineio))
 
-;; Atm this method requires that ast-parser.py is in $PATH. Also since I
-;; couldn't find some way to capture what is written to stdin when
-;; running (system "some-command") this method currently dumps the ast
-;; produced by the ast parser to a temporary file which is later read
-;; into an s-exp.
+;; Since I couldn't find some way to capture what is written to stdin
+;; when running (system "some-command") this method currently dumps the
+;; ast produced by the ast parser to a temporary file which is later
+;; read into an s-exp.
 (define (read-python3 port)
   (system "rm -f /tmp/python-ast.tmp")
   (let* ((code (read-string port))
-         (command (string-concatenate `("echo \"" ,code "\" | ast-parser.py > /tmp/python-ast.tmp"))))
+         (command (string-concatenate `("echo \"" ,code "\" | " ,load-file-dir
+                                        "/ast-parser.py > /tmp/python-ast.tmp"))))
     (system command)
     (read (open-file "/tmp/python-ast.tmp" "r"))))
-    ;; (read-string (open-file "/tmp/python-ast.tmp" "r"))))
-    ;; ast))
 
 (define (read-string port)
   (let* ((c (read-char port))
@@ -54,19 +52,9 @@
     (set-cdr! snd-last '())
     (list->string str)))
 
-;; ;; non-working hack to save the directory of the current file when
-;; ;; loaded
-;; (eval-when (compile load eval)
-;;   (define load-file-dir '())
-;;   (set! %load-hook (lambda (filename)
-;;                      (set! load-file-dir
-;;                            (let ((pos (string-rindex filename #\/)))
-;;                              (if pos
-;;                                  (substring filename 0 (- pos 1))
-;;                                  filename)))
-;;                      (display "filename = ")
-;;                      (display filename)
-;;                      (newline))))
-
-;; (display load-file-dir)
-;; (newline)
+(define load-file-dir
+  (let* ((filename (module-filename (current-module)))
+         (pos (string-rindex filename #\/)))
+    (if pos
+        (substring filename 0 pos)
+        filename)))
