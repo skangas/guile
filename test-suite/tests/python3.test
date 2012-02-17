@@ -1,3 +1,5 @@
+;; -*- mode: scheme -*-
+
 (define-module (test-suite test-python3)
   :use-module (test-suite lib)
   :use-module (language python3 parse))
