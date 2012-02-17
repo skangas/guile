@@ -1,0 +1,37 @@
+(define-module (test-suite test-python3)
+  :use-module (test-suite lib)
+  :use-module (language python3 parse))
+
+(use-modules (test-suite lib))
+(use-modules (language python3 parse))
+
+(define (test-parse str expected)
+  (let ((res (read-python3 (open-input-string str))))
+    (if (not (equal? res expected))
+        (begin
+          (display (string-concatenate `("Test FAILED!\n"
+                                         "Expected: "   ,(object->string expected)
+                                         "\nGot:      " ,(object->string res))))
+          (newline)
+          #f)
+        #t)))
+
+(define empty-args
+  '(<arguments> () None None () None None () ()))
+
+(with-test-prefix "Python3 parsing"
+  (pass-if
+   "fundef"
+   (test-parse
+    "def f(a,b=3):\n  pass"
+    `(<mod> ((<fundef> f
+                       (<arguments> ((<arg> a None) (<arg> b None)) None None () None None ((<num> 3)) ())
+                       (<pass>) () None)))))
+  (pass-if
+   "return num"
+   (test-parse
+    "def g():\n  return 3"
+    `(<mod> ((<fundef> g ,empty-args ((<return> (<num> 3))) () None)))))
+  ;; (pass-if
+  ;;  ""
+  )
