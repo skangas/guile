@@ -2,12 +2,12 @@
 
 (define-module (test-suite test-python3)
   :use-module (test-suite lib)
-  :use-module (language python3 parse))
-
-(use-modules (test-suite lib))
-(use-modules (language python3 parse))
+  :use-module (language python3 parse)
+  :use-module (ice-9 regex)
+  :use-module (srfi srfi-1))
 
 (define (test-parse str expected)
+  "Outputs some extra information in case a test case failed."
   (let ((res (read-python3 (open-input-string str))))
     (if (not (equal? res expected))
         (begin
@@ -18,22 +18,107 @@
           #f)
         #t)))
 
-(define empty-args
-  '(<arguments> () None None () None None () ()))
 
+;; This is used in the parser tests to be able to shorten the EXPECTED
+;; definition.
+(define empty-args '(<arguments> () None None () None None () ()))
+
+;; The path to the directory of the current module.
+(define load-file-dir
+  (let* ((filename (module-filename (current-module)))
+         (pos (string-rindex filename #\/)))
+    (if pos
+        (substring filename 0 pos)
+        filename)))
+
+(define (read-string port)
+  "Takes a port and returns the string that could be read from the port
+until eof."
+  (let* ((c (read-char port))
+         (last (list #\newline))
+         (snd-last '())
+         (str last))
+    (while (not (eof-object? c))
+           (set-car! last c)
+           (set-cdr! last (list #\newline))
+           (set! snd-last last)
+           (set! last (cdr last))
+           (set! c (read-char port)))
+    (set-cdr! snd-last '())
+    (list->string str)))
+
+(define (split-string-with split str)
+  "Splits a string with the given split string."
+  (let ((pos (string-contains str split)))
+    (if (not pos)
+        (if (equal? str "")
+            '()
+            (list str))
+        (cons (substring str 0 pos)
+              (split-string-with
+               split
+               (string-drop str (+ pos (string-length split))))))))
+
+;; This map holds all test cases.
+(define tests-map '())
+
+(define (add-tests group filename)
+  "Tries to parse all files starting with the given group prefix in the
+python3 directory. It then adds all parsed test cases to tests-map."
+  (let* ((file (string-concatenate `(,load-file-dir
+                                     "/python3/"
+                                     ,filename)))
+         (port (open-file file "r"))
+         (str (string-trim-both (read-string port)))
+         (test-group (assq group tests-map))
+         (tests (split-string-with "### END CODE" str)))
+    (if (not test-group)
+        (let ((new (list group)))
+          (set! tests-map (assq-set! tests-map group new))
+          (set! test-group new)))
+    (if tests
+        (begin
+          (pair-for-each
+           (lambda (x)
+             (let* ((strs (split-string-with "### START CODE" (car x)))
+                    (data (regexp-exec match-test-data (car strs))))
+               (if data
+                   (let ((name   (match:substring data 1))
+                         (expect (match:substring data 2))
+                         (code   (cadr strs)))
+                     (set-car! x `(<test> ,name
+                                          ,(read (open-input-string expect))
+                                          ,code)))
+                   (begin
+                     (if (not (equal? (car x) ""))
+                         (begin
+                           (display "WARNING: Couldn't parse testcase!") (newline)
+                           (display x)
+                           (newline)))))))
+           tests)
+          (assq-set! tests-map group (append! tests (cdr test-group))))
+        (begin
+          (display "WARNING: Failed to parse test file ")
+          (display filename) (newline)))
+    (close-port port)))
+
+;; A simple regexp to parse the name and expected value of a test-case.
+(define match-test-data
+  (make-regexp "NAME=(.*)\nEXPECTED=(.*)$"))
+
+(define dir (opendir (string-concatenate `(,load-file-dir "/python3"))))
+
+(do ((entry (readdir dir) (readdir dir)))
+    ((eof-object? entry))
+  (cond ((string-prefix? "parse" entry)
+         (add-tests 'parse entry))))
+(closedir dir)
+
+;; This runs all parsing tests.
 (with-test-prefix "Python3 parsing"
-  (pass-if
-   "fundef"
-   (test-parse
-    "def f(a,b=3):\n  pass"
-    `(<mod> ((<fundef> f
-                       (<arguments> ((<arg> a None) (<arg> b None)) None None () None None ((<num> 3)) ())
-                       (<pass>) () None)))))
-  (pass-if
-   "return num"
-   (test-parse
-    "def g():\n  return 3"
-    `(<mod> ((<fundef> g ,empty-args ((<return> (<num> 3))) () None)))))
-  ;; (pass-if
-  ;;  ""
-  )
+  (for-each
+   (lambda (x)
+     (pass-if (cadr x)
+       (test-parse (cadddr x) (eval (caddr x) (current-module)))))
+   (cdr (assq 'parse tests-map))))
+
