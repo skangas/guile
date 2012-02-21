@@ -75,7 +75,7 @@
                ,(car (comp-block body (add2env e argnames gensyms)))))))
         (econs id id e))))
     ((<return> ,exp)
-     (comp exp e))
+     (list `(call (primitive return) ,(car (comp exp e))) e))
     ((<expr> ,exp)
      (comp exp e))
 
