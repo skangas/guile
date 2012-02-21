@@ -1,0 +1,29 @@
+NAME=Test pass
+EXPECTED='(<mod> (<pass>))
+### START CODE
+pass
+### END CODE
+
+NAME=Test empty program
+EXPECTED='(<mod> ())
+### START CODE
+
+### END CODE
+
+NAME=Test simple fundef
+EXPECTED=`(<mod> ((<fundef> f
+                            (<arguments> ((<arg> a None) (<arg> b None)) None None () None None ((<num> 3)) ())
+                            (<pass>)
+                            ()
+                            None)))
+### START CODE
+def f(a,b=3):
+    pass
+### END CODE
+
+NAME=Test return num
+EXPECTED=`(<mod> ((<fundef> g ,empty-args ((<return> (<num> 3))) () None)))
+### START CODE
+def g():
+  return 3
+### END CODE
