@@ -290,10 +290,8 @@ def print_assert(stmt):
     print_expr(eh.test)
     printl(" ")
     print_expr(eh.msg)
-    printl(")")  
-    
-    Assert(expr test, expr? msg)
-    
+    printl(")")
+
 ##################################################
 ## expressions
 
