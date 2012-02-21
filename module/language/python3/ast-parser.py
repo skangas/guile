@@ -71,17 +71,17 @@ def print_stmt(stmt):
         print_delete(stmt)
     elif t == ast.Assign:
         print_assign(stmt)
-    # elif t == ast.AugAssign:
-    #     print_aug_assign(stmt)
+    elif t == ast.AugAssign:
+        print_aug_assign(stmt)
 
-    # elif t == ast.For:
-    #     print_for(stmt)
-    # elif t == ast.While:
-    #     print_while(stmt)
+    elif t == ast.For:
+        print_for(stmt)
+    elif t == ast.While:
+        print_while(stmt)
     elif t == ast.If:
         print_if(stmt)
-    # elif t == ast.With:
-    #     print_with(stmt)
+    elif t == ast.With:
+        print_with(stmt)
 
     # elif t == ast.Raise:
     #     print_raise(stmt)
@@ -181,6 +181,76 @@ def print_assign(assig):
     print_expr(assig.value)
     printl(")")
 
+def print_aug_assign(stmt):
+    def print_op(op):
+        t = type(op)
+        if t == ast.Add:
+            printl("Add ")
+        elif t == ast.Sub:
+            printl("Sub ")
+        elif t == ast.Mult:
+            printl("Mult ")
+        elif t == ast.Div:
+            printl("Div ")
+        elif t == ast.Mod:
+            printl("Mod ")
+        elif t == ast.Pow:
+            printl("Pow ")
+        elif t == ast.LShift:
+            printl("LShift ")
+        elif t == ast.RShift:
+            printl("RShift ")
+        elif t == ast.BitOr:
+            printl("BitOr ")
+        elif t == ast.BitXor:
+            printl("BitXor ")
+        elif t == ast.BitAnd:
+            printl("BitAnd ")
+        elif t == ast.FloorDiv:
+            printl("FloorDiv ")
+        else:
+            raise NotImplementedError("No match :" + str(op))
+    printl("(<aug-assign> ")
+    print_expr(stmt.target)
+    printl(" ")
+    print_op(stmt.op)    
+    print_expr(stmt.value)
+    printl(")")
+
+def print_for(stmt):
+    printl("(<for> ")
+    print_expr(stmt.target)
+    printl(" ")
+    print_expr(stmt.iter)
+    printl(" (")
+    print_list(print_stmt, stmt.body)
+    printl(") (")
+    print_list(print_stmt, stmt.orelse)
+    printl(")")
+
+def print_while(stmt):
+    printl("(<while> ")
+    print_expr(stmt.test)
+    printl(" (")
+    print_list(print_stmt, stmt.body)
+    printl(") (")
+    print_list(print_stmt, stmt.orelse)
+    printl(")")
+    
+def print_with(stmt):
+    printl("(<with> ")
+    raise SyntaxError(str(dir(stmt)))
+    print_expr(stmt.context_expr)
+    printl(" (")
+    print_list(print_stmt, stmt.body)
+    printl("))")
+    
+def print_withitem(withitem):
+    printl("(")
+    print_expr(withitem[0])
+    printl(" ")
+    print_expr(withitem[1])
+    printl(")")
 
 ##################################################
 ## expressions
