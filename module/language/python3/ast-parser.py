@@ -92,14 +92,14 @@ def print_stmt(stmt):
     elif t == ast.With:
         print_with(stmt)
 
-    # elif t == ast.Raise:
-    #     print_raise(stmt)
-    # elif t == ast.TryExcept:
-    #     print_try_except(stmt)
-    # elif t == ast.TryFinally:
-    #     print_try_finally(stmt)
-    # elif t == ast.Assert:
-    #     print_assert(stmt)
+    elif t == ast.Raise:
+        print_raise(stmt)
+    elif t == ast.TryExcept:
+        print_try_except(stmt)
+    elif t == ast.TryFinally:
+        print_try_finally(stmt)
+    elif t == ast.Assert:
+        print_assert(stmt)
 
     elif t == ast.Import:
         print_import(stmt)
@@ -111,7 +111,9 @@ def print_stmt(stmt):
     # elif t == ast.Nonlocal:
     #     print_non-local(stmt)
     elif t == ast.Expr:
+        printl("(<expr> ")
         print_expr(stmt.value)
+        printl(")")
     elif t == ast.Pass:
         print_pass(stmt)
     # elif t == ast.Break:
@@ -155,13 +157,9 @@ def print_classdef(stmt):
     printl("))")
 
 def print_return(ret):
-    # special case for return-void
-    if ret.value == None:
-        printl("<return-void>")
-    else:
-        printl("(<return> ")
-        print_expr(ret.value)
-        printl(")")
+    printl("(<return> ")
+    print_expr(ret.value)
+    printl(")")
 
 def print_delete(d):
     printl("(<delete> (")
@@ -248,19 +246,54 @@ def print_while(stmt):
     
 def print_with(stmt):
     printl("(<with> ")
-    raise SyntaxError(str(dir(stmt)))
     print_expr(stmt.context_expr)
-    printl(" (")
-    print_list(print_stmt, stmt.body)
-    printl("))")
-    
-def print_withitem(withitem):
-    printl("(")
-    print_expr(withitem[0])
     printl(" ")
-    print_expr(withitem[1])
+    print_expr(stmt.optional_vars)
+    printl(" ")
+    print_list(print_stmt, stmt.body)
     printl(")")
 
+def print_raise(stmt):
+    printl("(<raise> ")
+    print_expr(stmt.exc)
+    printl(" ")
+    print_expr(stmt.cause)
+    printl(")")
+
+def print_try_except(stmt):
+    printl("(<try-except> (")
+    print_list(print_stmt, stmt.body)
+    printl(") (")
+    print_list(print_excepthandler, stmt.handlers)
+    printl(") (")
+    print_list(print_stmt, stmt.orelse)
+    printl("))")
+    
+def print_try_finally(stmt):
+    printl("(<try-finally> (")
+    print_list(print_stmt, stmt.body)
+    printl(") (")
+    print_list(print_stmt, stmt.finalbody)
+    printl("))")  
+    
+def print_excepthandler(eh):
+    printl("(")
+    print_expr(eh.type)
+    printl(" ")
+    printl(str(eh.name)) # Possibly None
+    printl(" (")
+    print_list(print_stmt, eh.body)
+    printl("))")
+    
+def print_assert(stmt):
+    printl("(<assert>")
+    print_expr(eh.test)
+    printl(" ")
+    print_expr(eh.msg)
+    printl(")")  
+    
+    Assert(expr test, expr? msg)
+    
 ##################################################
 ## expressions
 
@@ -376,6 +409,7 @@ def print_binop(expr):
     printl(")")
 
     # BinOp(expr left, operator op, expr right)
+    # (<bin-op> op left right)
 
 def print_expr_context(ctx):
     t = type(ctx)
