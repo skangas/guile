@@ -42,9 +42,10 @@ for i in sys.argv[1:]:
  \tprint repr(i), \"not a # numeric value\"
     else: #test
         celsius=(fahrenheit-32)*5.0/9.0
-        print '%i\\260F = %i\\260C' % (int(fahrenheit), int(celsius+.5))
+        print '%i\\260F = %i\\260C' % (int(fahrenheit), \\
+ int(celsius+.5))
 
-define triple_quotes():
+def triple_quotes():
    \"\"\"
    testing a docstring
    \"\"\"
@@ -73,7 +74,6 @@ else:
 ;;; 2.1.4. Encoding declarations
 ;; TODO
 
-
 ;; String helper functions
 
 (define (string-insert str pos new)
@@ -98,26 +98,42 @@ else:
   (and (string=? (string-delete test 4 7) "0123789")))
 
 ;; Various tokens
-(define <indent>  " ##<INDENT>## ")
-(define <dedent>  " ##<DEDENT>## ")
-(define <newline> " ##<NEWLINE>## ")
+(define <indent>  " #<INDENT> ")
+(define <dedent>  " #<DEDENT> ")
+(define <newline> " #<NEWLINE> ")
 
 ;; Fix comments
+
+
+;; (define (find-first-char char pos)
+;;     (let* (
+;;            (m-pos (string-index str)))
+;;       (if (eqv? #\\ (string-ref str (- m-pos 1)))
+;;           (find-unquoted char (+ m-pos 1))
+;;           m-pos)))
+
+;; Find first occurrence of char in str that is not escaped by a \
+(define (find-unescaped str char pos)
+  (let* ((found (string-index str char pos)))
+    (if (and found (eqv? (string-ref str (- found 1)) #\\))
+        (find-unescaped str char (+ found 1))
+        found)))
+
+;; Find first occurrence of char in str that is not inside '' or ""
+(define (find-unquoted str char pos)
+  (let* ((re (string-append "[\"'" (make-string 1 char) "]"))
+         (m (string-match re str pos))
+         (m-pos (and m (match:start m)))
+         (m-ch  (and m (string-ref str m-pos))))
+    (and m
+         (if (eqv? m-ch char)
+             m-pos
+             (let ((next-pos (+ 1 (find-unescaped str m-ch (+ 1 m-pos)))))
+               (find-unquoted str char next-pos))))))
+
 (define* (kill-comments str)
   (define (first-unquoted-hash str pos)
-    (define (find-unquoted char pos)
-      (let* ((m (string-match (string-append "[" char "]") str pos))
-             (m-pos (match:start m)))
-        (if (eqv? #\\ (string-ref str (- m-pos 1)))
-            (find-unquoted char (+ m-pos 1))
-            m-pos)))
-    (let* ((f (string-match "[\"'#]" str pos))
-           (f-pos (and f (match:start f)))
-           (f-match (and f (match:substring f))))
-      (and f
-           (if (equal? f-match "#")
-               f-pos
-               (first-unquoted-hash str (+ 1 (find-unquoted f-match (+ 1 f-pos))))))))
+    (find-unquoted str #\# pos))
   (let recurse ((pos 0))
     (let ((hash-pos (first-unquoted-hash str pos)))
       (if (not hash-pos)
@@ -180,6 +196,17 @@ else:
     (pretty-print got)
     (string=? got correct)))
 
+;; Functions to skip blank lines
+
+(define blank-line (make-regexp "^ *$" regexp/newline))
+(define (skip-blank-lines str pos)
+  (let* ((nl (string-index str #\newline pos))
+         (this-line (and nl (substring str pos nl)))
+         (match (and nl (regexp-exec blank-line this-line))))
+    (if match
+        (skip-blank-lines str (+ 1 (match:end (regexp-exec blank-line str pos))))
+        pos)))
+
 ;; Python Language Reference
 ;; 2.1.8. Indentation (cont.)
 ;;
@@ -196,12 +223,6 @@ else:
 ;; are popped off, and for each number popped off a DEDENT token is
 ;; generated. At the end of the file, a DEDENT token is generated for each
 ;; number remaining on the stack that is larger than zero.
-
-;; (define-syntax (put-token)
-;;   (syntax-rules ()
-;;     ((_ tok)
-;;      (begin (set! str (string-insert str (- pos 1) tok))
-;;             (set pos (+ pos (string-length tok)))))))
 
 (define (add-indent-tokens str)
   (define (next-line pos)
@@ -223,17 +244,9 @@ else:
         (begin
           (set! pos (put-token pos <dedent>))
           (dedent-all pos (cdr stack)))))
-  (define blank-line (make-regexp "^ *$" regexp/newline))
-  (define (skip-blank-lines pos)
-    (let* ((nl (string-index str #\newline pos))
-           (this-line (and nl (substring str pos nl)))
-           (match (and nl (regexp-exec blank-line this-line))))
-      (if match
-         (skip-blank-lines (+ 1 (match:end (regexp-exec blank-line str pos))))
-         pos)))
   (let recurse ((pos 0)
                 (stack '(0)))
-    (set! pos (skip-blank-lines pos))
+    (set! pos (skip-blank-lines str pos))
     (let* ((non-space (string-first-non-space str pos))
            (spaces (- non-space pos)))
       (if (>= non-space (string-length str))
@@ -246,10 +259,21 @@ else:
                   (dedent pos spaces stack))
                  (else (list (next-line pos) stack))))))))
 
+(define (handle-line-continuations str)
+  (let recurse ((pos 0))
+   (let ((lc (find-unquoted str #\\ pos)))
+     ;; FIXME: Should throw exception if next character is not a newline
+     (if lc
+      (string-delete str lc (+ 2 lc))
+      str))))
+
 ;; Newline tokens
 
 ;; (define (add-newline-tokens str)
-;;   )
+;;   (let recurse ((pos 0)
+;;                 (stack '(0)))
+;;     (set! pos skip-blank-lines str pos)
+;;     ))
 
 ;; Triple-quoted strings
 
@@ -273,10 +297,16 @@ else:
             '(#\' #\") '(0 0))
   str)
 
-;; The actual preprocessor
-
 (define (preprocessor str)
-  (add-indent-tokens (fix-tabs (convert-triple-quotes (kill-comments str)))))
+  (add-indent-tokens
+   (fix-tabs
+    (kill-comments
+     (handle-line-continuations 
+      (convert-triple-quotes
+       str))))))
+
+;; unexpected character after line continuation character
 
 ;;; TODO Fixa så den slänger saker i slutet...
-;;; TODO Ignorera tomma rader
+
+
