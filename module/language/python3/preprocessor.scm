@@ -282,19 +282,21 @@ else:
   (define (escape-newlines str)
     (regexp-substitute/global #f nl-re str
                               'pre "\\n" 'post))
-  (define (convert-triples ch pos)
+  (define (convert-triples str ch)
     (let* ((re (string-concatenate (list (make-string 3 ch)
                                          "([^\"]*?)"
                                          (make-string 3 ch))))
-           (match (string-match re str)))
-      (if match
-          (regexp-substitute #f match
-                             'pre (make-string 1 ch)
-                             (escape-newlines (match:substring match 1))
-                             (make-string 1 ch) 'post))))
-  (for-each (lambda (a b)
-              (set! str (convert-triples a b)))
-            '(#\' #\") '(0 0))
+           (match #f))
+      (while (begin (set! match (string-match re str)) match)
+        (set! str (regexp-substitute #f match
+                                     'pre (make-string 1 ch)
+                                     (escape-newlines (match:substring match 1))
+                                     (make-string 1 ch) 'post)))
+
+      str))
+  (for-each (lambda (ch)
+              (set! str (convert-triples str ch)))
+            '(#\' #\"))
   str)
 
 (define (preprocessor str)
