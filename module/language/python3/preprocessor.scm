@@ -28,6 +28,28 @@
 
 (use-modules (ice-9 pretty-print))
 
+(define *python-ex2* (string-copy "
+
+month_names = ['Januari', 'Februari', 'Maart',      # These are the
+               'April',   'Mei',      'Juni',       # Dutch names
+               'Juli',    'Augustus', 'September',  # for the months
+               'Oktober', 'November', 'December']   # of the year
+
+def triple_quotes():
+   \"\"\"
+   testing a docstring
+   \"\"\"
+
+   print ''' testing another triple quote '''
+
+   print '''
+and
+now
+for
+multiline'''
+
+"))
+
 (define *python-ex* (string-copy "
 
 if len(sys.argv) == 1:
@@ -39,11 +61,16 @@ for i in sys.argv[1:]:
     try: 
 \tfahrenheit=float(string.atoi(i))
     except string.atoi_error:
- \tprint repr(i), \"not a # numeric value\"
+ \tprint(repr(i), \"not a # numeric value\")
     else: #test
         celsius=(fahrenheit-32)*5.0/9.0
-        print '%i\\260F = %i\\260C' % (int(fahrenheit), \\
- int(celsius+.5))
+        print('%i\\260F = %i\\260C' % (int(fahrenheit), \\
+ int(celsius+.5)))
+
+month_names = ['Januari', 'Februari', 'Maart',      # These are the
+               'April',   'Mei',      'Juni',       # Dutch names
+               'Juli',    'Augustus', 'September',  # for the months
+               'Oktober', 'November', 'December']   # of the year
 
 def triple_quotes():
    \"\"\"
@@ -102,16 +129,6 @@ else:
 (define <dedent>  " #<DEDENT> ")
 (define <newline> " #<NEWLINE> ")
 
-;; Fix comments
-
-
-;; (define (find-first-char char pos)
-;;     (let* (
-;;            (m-pos (string-index str)))
-;;       (if (eqv? #\\ (string-ref str (- m-pos 1)))
-;;           (find-unquoted char (+ m-pos 1))
-;;           m-pos)))
-
 ;; Find first occurrence of char in str that is not escaped by a \
 (define (find-unescaped str char pos)
   (let* ((found (string-index str char pos)))
@@ -131,6 +148,9 @@ else:
              (let ((next-pos (+ 1 (find-unescaped str m-ch (+ 1 m-pos)))))
                (find-unquoted str char next-pos))))))
 
+;; Remove all comments ;; FIXME: disallow comments after \
+
+;; FIXME Make sure to delete crap at end of string after move
 (define* (kill-comments str)
   (define (first-unquoted-hash str pos)
     (find-unquoted str #\# pos))
@@ -198,15 +218,6 @@ else:
 
 ;; Functions to skip blank lines
 
-(define blank-line (make-regexp "^ *$" regexp/newline))
-(define (skip-blank-lines str pos)
-  (let* ((nl (string-index str #\newline pos))
-         (this-line (and nl (substring str pos nl)))
-         (match (and nl (regexp-exec blank-line this-line))))
-    (if match
-        (skip-blank-lines str (+ 1 (match:end (regexp-exec blank-line str pos))))
-        pos)))
-
 ;; Python Language Reference
 ;; 2.1.8. Indentation (cont.)
 ;;
@@ -225,39 +236,76 @@ else:
 ;; number remaining on the stack that is larger than zero.
 
 (define (add-indent-tokens str)
+
+  ;; 2.1.7 A logical line that contains only spaces, tabs, formfeeds and
+  ;; possibly a comment, is ignored (i.e., no NEWLINE token is
+  ;; generated).
+  (define blank-line (make-regexp "^ *$" regexp/newline))
+  (define (skip-blank-lines str pos)
+    (let* ((nl (string-index str #\newline pos))
+           (this-line (and nl (substring str pos nl)))
+           (match (and nl (regexp-exec blank-line this-line))))
+      (if match
+          (skip-blank-lines str (+ 1 (match:end (regexp-exec blank-line str pos))))
+          pos)))
+
+  ;; 2.1.6. Implicit line joining
+  ;; Expressions in parentheses, square brackets or curly braces can be
+  ;; split over more than one physical line without using backslashes.
+  (define tokens (make-regexp "[\"'(){}\\[\\]]"))
+  (define (end-of-logical-line pos stack))
+
   (define (next-line pos)
     (+ 1 (string-index str #\newline pos)))
+
   (define (put-token pos tok)
     (set! str (string-insert str (- pos 1) tok))
     (+ pos (string-length tok)))
+
   (define (indent pos spaces stack)
     (set! pos (put-token pos <indent>))
     (list (next-line pos) (cons spaces stack)))
+
   (define (dedent pos spaces stack)
     (set! pos (put-token pos <dedent>))
     (if (< spaces (cadr stack))
         (dedent pos spaces (cdr stack))
         (list (next-line pos) (cdr stack))))
+
   (define (dedent-all pos stack)
     (if (= 0 (car stack))
         str
         (begin
           (set! pos (put-token pos <dedent>))
           (dedent-all pos (cdr stack)))))
+
+
   (let recurse ((pos 0)
-                (stack '(0)))
+                (tok-stack '())
+                (pos-stack '(0)))
     (set! pos (skip-blank-lines str pos))
+    (handle-token-stack pos tok-stack)
+
     (let* ((non-space (string-first-non-space str pos))
            (spaces (- non-space pos)))
-      (if (>= non-space (string-length str))
-          (dedent-all pos stack)
+      (if (< non-space (string-length str))
+          (dedent-all pos pos-stack)
           (apply
            recurse
-           (cond ((> spaces (car stack))
-                  (indent pos spaces stack))
-                 ((< spaces (car stack))
-                  (dedent pos spaces stack))
-                 (else (list (next-line pos) stack))))))))
+           (cond ((> spaces (car pos-stack))
+                  (indent pos spaces pos-stack))
+                 ((< spaces (car pos-stack))
+                  (dedent pos spaces pos-stack))
+                 (else
+                  (list (next-line pos) pos-stack))))))))
+
+;; 2.1.5. Explicit line joining
+
+;; Two or more physical lines may be joined into logical lines using
+;; backslash characters (\), as follows: when a physical line ends in a
+;; backslash that is not part of a string literal or comment, it is
+;; joined with the following forming a single logical line, deleting the
+;; backslash and the following end-of-line character.
 
 (define (handle-line-continuations str)
   (let recurse ((pos 0))
@@ -266,14 +314,6 @@ else:
      (if lc
       (string-delete str lc (+ 2 lc))
       str))))
-
-;; Newline tokens
-
-;; (define (add-newline-tokens str)
-;;   (let recurse ((pos 0)
-;;                 (stack '(0)))
-;;     (set! pos skip-blank-lines str pos)
-;;     ))
 
 ;; Triple-quoted strings
 
@@ -299,6 +339,8 @@ else:
             '(#\' #\"))
   str)
 
+(define (add-indent-tokens str) str)
+
 (define (preprocessor str)
   (add-indent-tokens
    (fix-tabs
@@ -306,9 +348,3 @@ else:
      (handle-line-continuations 
       (convert-triple-quotes
        str))))))
-
-;; unexpected character after line continuation character
-
-;;; TODO Fixa så den slänger saker i slutet...
-
-
