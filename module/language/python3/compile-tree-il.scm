@@ -121,14 +121,25 @@
                                             (symbol->string x) "$")))
                        argnames)))
     `(lambda-case
-      ((#f #f ,rest () () (,rest))
-       (let ,argnames ,gensyms
-            ((lexical ,rest ,rest))
-            ;; ,(list `(call (primitive cons*) (lexical ,rest ,rest) ,@inits)) ;; doesn't work
-            ;; (call (primitive append) (lexical ,rest ,rest) (begin ,inits))  ;; doesn't work
-            ,(car (comp-block body (add2env env argnames gensyms))))))))
+      ((() #f ,rest () () (,rest))
+       (let-values
+           (call (primitive apply) (primitive values)
+                 (call (toplevel append)
+                       (lexical ,rest ,rest)
+                       (call (primitive list)
+                             ,@inits)))
+         (lambda-case
+          ((,argnames #f #f () () ,gensyms)
+           ,(car (comp-block body (add2env env argnames gensyms))))))))))
 
 (define (test str)
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
   (display-ln code)
   (compile-tree-il code '() '())))
+
+;;;; The documentation for let-values in tree-il is incorrect. This is
+;;;; an example for how it could be used.
+;; (let-values (call (primitive apply)
+;;                   (primitive values)
+;;                   (call (primitive list) (const 3) (const 4)))
+;;   (lambda-case (((a b) #f #f () () (a b)) (lexical b b))))
