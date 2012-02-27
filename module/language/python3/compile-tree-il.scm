@@ -9,12 +9,12 @@
 ;;;; modify it under the terms of the GNU Lesser General Public
 ;;;; License as published by the Free Software Foundation; either
 ;;;; version 3 of the License, or (at your option) any later version.
-;;;; 
+;;;;
 ;;;; This library is distributed in the hope that it will be useful,
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; Lesser General Public License for more details.
-;;;; 
+;;;;
 ;;;; You should have received a copy of the GNU Lesser General Public
 ;;;; License along with this library; if not, write to the Free Software
 ;;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
@@ -37,7 +37,6 @@
 ;;   (-> (call (@implv sym) arg ...)))
 
 (define (econs name gensym env)
-  ;; (acons name (-> (lexical name gensym)) env))
   (acons name gensym env))
 
 ;; for now only look in local env
@@ -64,23 +63,15 @@
     ;; module code
     ((<module> ,stmts)
      (comp-block stmts e))
-     ;; `(begin ,@(map (lambda (stmt) (comp stmt e)) stmts)))
 
     ;; stmt code
 
     ;; Only handles the case with the rest argument.
     ((<function-def> ,id ,args ,body ,decos ,ret)
-     ;; (let* ((ret (comp-args args))
-     ;;        (argnames (car ret))
-     ;;        (inits (cadr ret))
-     ;;        (gensyms (map (lambda (x) (gensym (symbol->string x))) argnames)))
      (list
       `(define ,id
          (lambda ()
            ,(comp-fun-body args body e)))
-      ;; (lambda-case
-      ;;  ((,argnames #f #f () () ,gensyms)
-      ;;   ,(car (comp-block body (add2env e argnames gensyms)))))))
       (econs id id e)))
     ((<return> ,exp)
      (list `(call (primitive return) ,(car (comp exp e))) e))
@@ -112,7 +103,6 @@
   (let* ((stararg (cadr args))
          (argnames (if (and (car args) stararg)
                        (begin
-                         (debug "args =" (car args))
                          (append (map car (car args)) (list stararg)))
                        (or (map car (car args)) stararg '())))
          (inits (map (lambda (x) (car (comp x env))) (seventh args)))
