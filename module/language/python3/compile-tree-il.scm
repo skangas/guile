@@ -47,6 +47,11 @@
 (define (display-ln obj)
   (display obj) (newline))
 
+(define (debug str . rest)
+  (display str) (display " ")
+  (map (lambda (x) (display x) (display ", ")) rest)
+  (newline))
+
 (define (compile-tree-il exp env opts)
   (let ((ret (comp exp '())))
     (values
@@ -57,23 +62,26 @@
 (define (comp x e)
   (pmatch x
     ;; module code
-    ((<mod> ,stmts)
+    ((<module> ,stmts)
      (comp-block stmts e))
      ;; `(begin ,@(map (lambda (stmt) (comp stmt e)) stmts)))
 
     ;; stmt code
 
-    ;; for now only handle the arguments and no default values
-    ((<fundef> ,id ,args ,body ,decos ,ret)
-     (let* ((argnames (get-args args))
-            (gensyms (map (lambda (x) (gensym (symbol->string x))) argnames)))
-       (list
-        `(define ,id
-           (lambda ()
-             (lambda-case
-              ((,argnames #f #f () () ,gensyms)
-               ,(car (comp-block body (add2env e argnames gensyms)))))))
-        (econs id id e))))
+    ;; Only handles the case with the rest argument.
+    ((<function-def> ,id ,args ,body ,decos ,ret)
+     ;; (let* ((ret (comp-args args))
+     ;;        (argnames (car ret))
+     ;;        (inits (cadr ret))
+     ;;        (gensyms (map (lambda (x) (gensym (symbol->string x))) argnames)))
+     (list
+      `(define ,id
+         (lambda ()
+           ,(comp-fun-body args body e)))
+      ;; (lambda-case
+      ;;  ((,argnames #f #f () () ,gensyms)
+      ;;   ,(car (comp-block body (add2env e argnames gensyms)))))))
+      (econs id id e)))
     ((<return> ,exp)
      (list `(call (primitive return) ,(car (comp exp e))) e))
     ((<expr> ,exp)
@@ -97,8 +105,28 @@
 (define (add2env env args values)
   (append (zip args values) env))
 
-(define (get-args args)
-  (map (lambda (a) (cadr a)) (cadr args)))
+(define (comp-args args)
+  (map (lambda (a) (car a)) (car args)))
+
+(define (comp-fun-body args body env)
+  (let* ((stararg (cadr args))
+         (argnames (if (and (car args) stararg)
+                       (begin
+                         (debug "args =" (car args))
+                         (append (map car (car args)) (list stararg)))
+                       (or (map car (car args)) stararg '())))
+         (inits (map (lambda (x) (car (comp x env))) (seventh args)))
+         (rest (gensym "rest$"))
+         (gensyms (map (lambda (x) (gensym (string-append
+                                            (symbol->string x) "$")))
+                       argnames)))
+    `(lambda-case
+      ((#f #f ,rest () () (,rest))
+       (let ,argnames ,gensyms
+            ((lexical ,rest ,rest))
+            ;; ,(list `(call (primitive cons*) (lexical ,rest ,rest) ,@inits)) ;; doesn't work
+            ;; (call (primitive append) (lexical ,rest ,rest) (begin ,inits))  ;; doesn't work
+            ,(car (comp-block body (add2env env argnames gensyms))))))))
 
 (define (test str)
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))

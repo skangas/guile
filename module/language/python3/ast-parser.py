@@ -75,9 +75,11 @@ def universal(x):
     elif type(x) == list:
         fields = [universal(field) for field in x]
         return "(%s)" % (" ".join(fields))
+    elif x == None:
+        return "#f"
     else:
         return str(x)
-  
+
 if __name__ == '__main__':
     main(sys.argv)
     # if len(sys.argv) > 1:
