@@ -89,7 +89,15 @@ corresponding tree-il expression."
     ((<num> ,n)
      (list `(const ,n) e))
     ((<name> ,name ,ctx)
-     (list `(lexical name ,(lookup name e)) e))))
+     (list `(lexical name ,(lookup name e)) e))
+    ((<tuple> ,exps ,ctx)
+     (comp-list-or-tuple exps e))
+    ((<list> ,exps ,ctx)
+     (comp-list-or-tuple exps e))))
+
+(define (comp-list-or-tuple exps env)
+  "Compiles a list or tuple expression into a list of values."
+  (list `(primcall list ,@(map (lambda (x) (car (comp x env))) exps)) env))
 
 (define (comp-block stmts env)
   "Compiles a block of statements. Updates the environment in between
