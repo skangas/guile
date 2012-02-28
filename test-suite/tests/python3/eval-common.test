@@ -1,0 +1,44 @@
+NAME=Test function and call
+EXPECTED='()
+### START CODE
+def f():
+    return ()
+
+return f()
+### END CODE
+
+NAME=Test default args and empty starargs
+EXPECTED='(1 2 ())
+### START CODE
+def f(a, b=2, *l):
+    return (a, b, l)
+    
+return f(1)
+### END CODE
+
+NAME=Test overridden default args and non-empty starargs
+EXPECTED='(1 2 (3 4))
+### START CODE
+def f(a, b=0, *l):
+    return (a, b, l)
+    
+return f(1, 2, 3, 4)
+### END CODE
+
+NAME=Test inputting empty stararg into stararg
+EXPECTED='()
+### START CODE
+def f(*l):
+    return l
+  
+f(*())
+### END CODE
+
+NAME=Test inputting empty stararg into function not accepting args
+EXPECTED='()
+### START CODE
+def f():
+    return ()
+  
+f(*())
+### END CODE
