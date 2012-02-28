@@ -43,6 +43,7 @@
 
 ;; for now only look in local env
 (define (lookup name env)
+  "Looks up a given name in a given environment."
   (car (assq-ref env name)))
 
 (define (display-ln obj)
@@ -54,6 +55,8 @@
   (newline))
 
 (define (compile-tree-il exp env opts)
+    "Compiles a given python3 expressions in a given environment into a
+corresponding tree-il expression."
   (let ((ret (comp exp '())))
     (values
      (parse-tree-il (car ret))
@@ -61,6 +64,8 @@
      env)))
 
 (define (comp x e)
+  "Compiles a given python3 expressions in a given environment into a
+corresponding tree-il expression."
   (pmatch x
     ;; module code
     ((<module> ,stmts)
@@ -87,6 +92,8 @@
      (list `(lexical name ,(lookup name e)) e))))
 
 (define (comp-block stmts env)
+  "Compiles a block of statements. Updates the environment in between
+every statement."
   (let lp ((in stmts) (out '()) (e env))
     (pmatch in
       ((,stmt . ,rest)
@@ -96,6 +103,7 @@
        (list `(begin ,@(reverse! out)) env)))))
 
 (define (add2env env args values)
+  "Adds a list of symbols to the supplied environment."
   (append (zip args values) env))
 
 (define (comp-args args)
