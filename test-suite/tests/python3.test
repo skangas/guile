@@ -18,10 +18,9 @@
           #f)
         #t)))
 
-
 ;; This is used in the parser tests to be able to shorten the EXPECTED
 ;; definition.
-(define empty-args '(<arguments> () None None () None None () ()))
+(define empty-args '(() #f #f () #f #f () ()))
 
 ;; The path to the directory of the current module.
 (define load-file-dir
