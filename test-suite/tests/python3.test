@@ -7,9 +7,20 @@
   :use-module (srfi srfi-1))
 
 (define (test-parse str expected)
-  "Outputs some extra information in case a test case failed."
-  (let ((res (read-python3 (open-input-string str))))
-    (if (not (equal? res expected))
+  "Runs a parse test."
+  (let ((cmp-fun (lambda (res exp) (not (equal? res exp)))))
+    (run-test read-python3 cmp-fun str expected)))
+
+(define (test-eval str expected)
+  "Runs a evaluation test. Dummy implementation until eval-string is
+possible"
+  #t)
+
+(define (run-test fun cmp-fun str expected)
+  "Runs a test. Outputs some extra information in case a test case
+failed."
+  (let ((res (fun (open-input-string str))))
+    (if (cmp-fun res expected)
         (begin
           (display (string-concatenate `("Test FAILED!\n"
                                          "Expected: "   ,(object->string expected)
@@ -110,7 +121,9 @@ python3 directory. It then adds all parsed test cases to tests-map."
 (do ((entry (readdir dir) (readdir dir)))
     ((eof-object? entry))
   (cond ((string-prefix? "parse" entry)
-         (add-tests 'parse entry))))
+         (add-tests 'parse entry))
+        ((string-prefix? "eval" entry)
+         (add-tests 'eval entry))))
 (closedir dir)
 
 ;; This runs all parsing tests.
@@ -121,3 +134,9 @@ python3 directory. It then adds all parsed test cases to tests-map."
        (test-parse (cadddr x) (eval (caddr x) (current-module)))))
    (cdr (assq 'parse tests-map))))
 
+(with-test-prefix "Python3 evaluation"
+  (for-each
+   (lambda (x)
+     (pass-if (cadr x)
+       (test-eval (cadddr x) (eval (caddr x) (current-module)))))
+   (cdr (assq 'eval tests-map))))
