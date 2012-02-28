@@ -28,14 +28,15 @@
   #:use-module (srfi srfi-1)
   #:export (compile-tree-il test))
 
-;; (define-syntax-rule (-> (type arg ...))
-;;   `(type ,arg ...))
+;; Syntax-rules stolen from (language ecmascript compile-tree-il) :)
+(define-syntax-rule (-> (type arg ...))
+  `(type ,arg ...))
 
-;; (define-syntax-rule (@implv sym)
-;;   (-> (@ '(language ecmascript impl) 'sym)))
+(define-syntax-rule (@implv sym)
+  (-> (@ '(language python3 impl) 'sym)))
 
-;; (define-syntax-rule (@impl sym arg ...)
-;;   (-> (call (@implv sym) arg ...)))
+(define-syntax-rule (@impl sym arg ...)
+  (-> (call (@implv sym) arg ...)))
 
 (define (econs name gensym env)
   (acons name gensym env))
