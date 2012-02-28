@@ -73,15 +73,14 @@ corresponding tree-il expression."
 
     ;; stmt code
 
-    ;; Only handles the case with the rest argument.
     ((<function-def> ,id ,args ,body ,decos ,ret)
      (list
       `(define ,id
          (lambda ()
-           ,(comp-fun-body args body e)))
+           ,(comp-fun-body id args body e)))
       (econs id id e)))
     ((<return> ,exp)
-     (list `(call (primitive return) ,(car (comp exp e))) e))
+     (list `(primcall return ,(car (comp exp e))) e))
     ((<expr> ,exp)
      (comp exp e))
 
@@ -114,36 +113,39 @@ every statement."
   "Adds a list of symbols to the supplied environment."
   (append (zip args values) env))
 
-(define (comp-args args)
-  (map (lambda (a) (car a)) (car args)))
-
-(define (comp-fun-body args body env)
+;; Handles all types of calls not involving kwargs and keyword
+;; arguments.
+(define (comp-fun-body id args body env)
+  "Compiles a function body."
   (let* ((stararg (cadr args))
          (argnames (if (and (car args) stararg)
-                       (begin
-                         (append (map car (car args)) (list stararg)))
+                       (append (map car (car args)) (list stararg))
                        (or (map car (car args)) stararg '())))
+         (argconsts (map (lambda (x) `(const ,x)) argnames))
          (inits (map (lambda (x) (car (comp x env))) (seventh args)))
          (rest (gensym "rest$"))
+         (argsym (gensym "args$"))
+         ;; (kwargsym (gensym "kwargs$"))    kwargs not implemented yet
          (gensyms (map (lambda (x) (gensym (string-append
                                             (symbol->string x) "$")))
                        argnames)))
     `(lambda-case
-      ((() #f ,rest () () (,rest))
+      ((() #f ,rest
+        (#f (#:args ,argsym ,argsym)) ;; (#:kwargs ,kwargsym ,kwargsym))
+        ((const #f)) (,rest ,argsym))
        (let-values
-           (call (primitive apply) (primitive values)
-                 (call (toplevel append)
-                       (lexical ,rest ,rest)
-                       (call (primitive list)
-                             ,@inits)))
+         (primcall apply (primitive values)
+                   ,(@impl fun-match-arguments
+                           `(const ,id)
+                           `(primcall list ,@argconsts)
+                           `(const ,(if stararg #t #f))
+                           (lex1 rest)
+                           (lex1 argsym)
+                           ;; (lex1 kwargsym)
+                           `(primcall list ,@inits)))
          (lambda-case
           ((,argnames #f #f () () ,gensyms)
            ,(car (comp-block body (add2env env argnames gensyms))))))))))
-
-(define (test str)
-  (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
-  (display-ln code)
-  (compile-tree-il code '() '())))
 
 ;;;; The documentation for let-values in tree-il is incorrect. This is
 ;;;; an example for how it could be used.
@@ -151,3 +153,13 @@ every statement."
 ;;                   (primitive values)
 ;;                   (call (primitive list) (const 3) (const 4)))
 ;;   (lambda-case (((a b) #f #f () () (a b)) (lexical b b))))
+
+(define (lex1 sym)
+  "A shorthand for lexical references where the symbol is the same as
+the gensym."
+  `(lexical ,sym ,sym))
+
+(define (test str)
+  (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
+  (display-ln code)
+  (compile-tree-il code '() '())))
