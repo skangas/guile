@@ -157,14 +157,13 @@ else:
 (define* (kill-comments str)
   (define (first-unquoted-hash str pos)
     (find-unquoted str #\# pos))
-  (let recurse ((pos 0))
+  (let recurse ((pos 0) (str str))
     (let ((hash-pos (first-unquoted-hash str pos)))
       (if (not hash-pos)
           str
           (let ((eol (string-index str #\newline hash-pos)))
-            (substring-move! str eol (- (string-length str) 1)
-                             str hash-pos)
-            (recurse hash-pos))))))
+            (recurse hash-pos (string-append (substring str 0 hash-pos)
+                                             (substring str eol (string-length str)))))))))
 
 ;; Python Language Reference
 ;; 2.1.8. Indentation
