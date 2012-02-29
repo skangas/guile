@@ -26,7 +26,9 @@
 ;;   #:use-module (system base language)
 ;;   #:export (preprocessor))
 
-(use-modules (ice-9 pretty-print))
+(use-modules (ice-9 pretty-print)
+             (srfi srfi-1))
+
 
 (define *python-ex2* (string-copy "
 
@@ -145,8 +147,9 @@ else:
     (and m
          (if (eqv? m-ch char)
              m-pos
-             (let ((next-pos (+ 1 (find-unescaped str m-ch (+ 1 m-pos)))))
-               (find-unquoted str char next-pos))))))
+             (let ((next-pos (find-unescaped str m-ch (+ 1 m-pos))))
+               (and next-pos
+                    (find-unquoted str char (+ 1 next-pos))))))))
 
 ;; Remove all comments ;; FIXME: disallow comments after \
 
@@ -236,7 +239,6 @@ else:
 ;; number remaining on the stack that is larger than zero.
 
 (define (add-indent-tokens str)
-
   ;; 2.1.7 A logical line that contains only spaces, tabs, formfeeds and
   ;; possibly a comment, is ignored (i.e., no NEWLINE token is
   ;; generated).
@@ -248,15 +250,31 @@ else:
       (if match
           (skip-blank-lines str (+ 1 (match:end (regexp-exec blank-line str pos))))
           pos)))
-
+  
   ;; 2.1.6. Implicit line joining
   ;; Expressions in parentheses, square brackets or curly braces can be
   ;; split over more than one physical line without using backslashes.
-  (define tokens (make-regexp "[\"'(){}\\[\\]]"))
-  (define (end-of-logical-line pos stack))
-
-  (define (next-line pos)
-    (+ 1 (string-index str #\newline pos)))
+  (define start-tokens '("[" "(" "{"))
+  (define end-tokens '("]" ")" "{"))
+  (define tokens (make-regexp "[\\[\\]()\\{\\}]"))
+  (define (handle-tok-stack tok-stack tok)
+    (let ((t (match:substring tok 0)))
+      ;; We need the same amount of start and end tokens to have a
+      ;; logical line.
+      (cond ((member t start-tokens)
+             (cons t tok-stack))
+            ((member t end-tokens)
+             (cdr tok-stack))
+            (else tok-stack))))
+  (define (next-logical-line pos)
+    (let rec ((pos 0) (tok-stack '()))
+      (let ((nl (string-index str #\newline pos))
+            (tok (and (regexp-exec tokens str pos))))
+        (if (and tok (< (match:start tok) nl))
+            (rec (+ 1 (match:start tok)) (handle-tok-stack tok-stack tok))
+            (if (> (length tok-stack) 0)
+                (rec (+ 1 nl) tok-stack)
+                nl)))))
 
   (define (put-token pos tok)
     (set! str (string-insert str (- pos 1) tok))
@@ -264,13 +282,13 @@ else:
 
   (define (indent pos spaces stack)
     (set! pos (put-token pos <indent>))
-    (list (next-line pos) (cons spaces stack)))
+    (list (next-logical-line pos) (cons spaces stack)))
 
   (define (dedent pos spaces stack)
     (set! pos (put-token pos <dedent>))
     (if (< spaces (cadr stack))
         (dedent pos spaces (cdr stack))
-        (list (next-line pos) (cdr stack))))
+        (list (next-logical-line pos) (cdr stack))))
 
   (define (dedent-all pos stack)
     (if (= 0 (car stack))
@@ -279,13 +297,8 @@ else:
           (set! pos (put-token pos <dedent>))
           (dedent-all pos (cdr stack)))))
 
-
-  (let recurse ((pos 0)
-                (tok-stack '())
-                (pos-stack '(0)))
+  (let recurse ((pos 0) (pos-stack '(0)))
     (set! pos (skip-blank-lines str pos))
-    (handle-token-stack pos tok-stack)
-
     (let* ((non-space (string-first-non-space str pos))
            (spaces (- non-space pos)))
       (if (< non-space (string-length str))
@@ -297,7 +310,7 @@ else:
                  ((< spaces (car pos-stack))
                   (dedent pos spaces pos-stack))
                  (else
-                  (list (next-line pos) pos-stack))))))))
+                  (list (next-logical-line pos) pos-stack))))))))
 
 ;; 2.1.5. Explicit line joining
 
