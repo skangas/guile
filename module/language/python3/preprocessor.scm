@@ -127,9 +127,9 @@ else:
   (and (string=? (string-delete test 4 7) "0123789")))
 
 ;; Various tokens
-(define <indent>  " #<INDENT> ")
-(define <dedent>  " #<DEDENT> ")
-(define <newline> " #<NEWLINE> ")
+(define <indent>  "#<INDENT>")
+(define <dedent>  "#<DEDENT>")
+(define <newline> "#<NEWLINE>")
 
 ;; Find first occurrence of char in str that is not escaped by a \
 (define (find-unescaped str char pos)
@@ -238,6 +238,10 @@ else:
 ;; number remaining on the stack that is larger than zero.
 
 (define (add-indent-tokens str)  
+  (define (put-token pos tok)
+    (set! str (string-insert str pos tok))
+    (+ pos (string-length tok)))
+
   ;; 2.1.6. Implicit line joining
   ;; Expressions in parentheses, square brackets or curly braces can be
   ;; split over more than one physical line without using backslashes.
@@ -262,7 +266,8 @@ else:
                  (handle-token tok tok-stack))
             (if (> (length tok-stack) 0)
                 (rec (+ 1 nl) tok-stack)
-                nl)))))
+                (and nl
+                     (put-token nl <newline>)))))))
 
   ;; 2.1.7 A logical line that contains only spaces, tabs, formfeeds and
   ;; possibly a comment, is ignored (i.e., no NEWLINE token is
@@ -276,12 +281,8 @@ else:
           (skip-blank-lines str (+ 1 (match:end (regexp-exec blank-line str pos))))
           pos)))
 
-  (define (put-token pos tok)
-    (set! str (string-insert str (- pos 1) tok))
-    (+ pos (string-length tok)))
-
   (define (indent pos spaces stack)
-    (set! pos (put-token pos <indent>))
+    (set! pos (put-token (- 2 pos) <indent>))
     (list (next-logical-line pos) (cons spaces stack)))
 
   (define (dedent pos spaces stack)
@@ -290,7 +291,7 @@ else:
         (dedent pos spaces (cdr stack))
         (list (next-logical-line pos) (cdr stack))))
 
-  (define (dedent-all pos stack)
+  (define (dedent-all (- 2 pos) stack)
     (if (= 0 (car stack))
         str
         (begin
@@ -364,3 +365,7 @@ else:
      (handle-line-continuations 
       (convert-triple-quotes
        str))))))
+
+;; TODO: Handle: code with ;
+;; TODO: Handle: if (true): pass
+;; TODO: Handle: if (true): pass ; true
