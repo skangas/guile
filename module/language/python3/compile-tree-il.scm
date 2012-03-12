@@ -81,6 +81,13 @@ corresponding tree-il expression."
       (econs id id e)))
     ((<return> ,exp)
      (list `(primcall return ,(car (comp exp e))) e))
+    ((<assign> ,targets ,value)
+     (pmatch targets
+       (((<name> ,name <store>))
+        (list `(define ,name ,(car (comp value e)))
+              (econs name name e)))
+       (((<tuple> ,names))
+        (list #f #f))))
     ((<expr> ,exp)
      (comp exp e))
 
