@@ -104,7 +104,7 @@ every statement."
   (let lp ((in stmts) (out '()) (e env))
     (pmatch in
       ((,stmt . ,rest)
-       (let ((ret (comp stmt env)))
+       (let ((ret (comp stmt e)))
          (lp rest (cons (car ret) out) (cadr ret))))
       ('()
        (list `(begin ,@(reverse! out)) env)))))
