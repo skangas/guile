@@ -39,7 +39,7 @@
   (-> (call (@implv sym) arg ...)))
 
 (define (econs name gensym env)
-  (acons name gensym env))
+  (cons (list name gensym) env))
 
 ;; for now only look in local env
 (define (lookup name env)
