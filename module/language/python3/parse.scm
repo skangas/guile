@@ -22,9 +22,9 @@
 ;;; Code:
 
 (define-module (language python3 parse)
-  #:export (read-python3)
   #:use-module (srfi srfi-1)
-  #:use-module (ice-9 lineio))
+  #:use-module (ice-9 lineio)
+  #:export (read-python3))
 
 ;; Since I couldn't find some way to capture what is written to stdin
 ;; when running (system "some-command") this method currently dumps the

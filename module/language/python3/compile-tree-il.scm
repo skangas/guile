@@ -23,6 +23,7 @@
 
 (define-module (language python3 compile-tree-il)
   #:use-module (language python3 impl)
+  #:use-module (language python3 commons)
   #:use-module (language tree-il)
   #:use-module (system base pmatch)
   #:use-module (srfi srfi-1)
@@ -44,14 +45,6 @@
 (define (lookup name env)
   "Looks up a given name in a given environment."
   (assq-ref env name))
-
-(define (display-ln obj)
-  (display obj) (newline))
-
-(define (debug str . rest)
-  (display str) (display " ")
-  (map (lambda (x) (display x) (display ", ")) rest)
-  (newline))
 
 (define (compile-tree-il exp env opts)
     "Compiles a given python3 expressions in a given environment into a

@@ -22,6 +22,7 @@
 ;;; Code:
 
 (define-module (language python3 impl)
+  #:use-module (language python3 commons)
   #:use-module (srfi srfi-1)
   #:use-module (system base pmatch)
   #:export (compare fun-match-arguments))
@@ -47,8 +48,6 @@ the right arguments in the right order for use in a function body."
           (call-with-values
             (lambda () (split-at first arg-len))
             (lambda (a b) `(,@a ,b)))))))
-
-(define debug (@@ (language python3 compile-tree-il) debug))
 
 (define (compare os vs)
   (let lp ((ops os) (vals vs))
