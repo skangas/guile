@@ -39,12 +39,11 @@
   (-> (call (@implv sym) arg ...)))
 
 (define (econs name gensym env)
-  (cons (list name gensym) env))
+  (acons name gensym env))
 
-;; for now only look in local env
 (define (lookup name env)
   "Looks up a given name in a given environment."
-  (car (assq-ref env name)))
+  (assq-ref env name))
 
 (define (display-ln obj)
   (display obj) (newline))
@@ -101,7 +100,10 @@ corresponding tree-il expression."
     ((<num> ,n)
      (list `(const ,n) e))
     ((<name> ,name ,ctx)
-     (list `(lexical name ,(lookup name e)) e))
+     (let ((ret (lookup name e)))
+       (list (if ret
+                 `(lexical ,name ,ret)
+                 (-> (toplevel name))) e)))
     ((<tuple> ,exps ,ctx)
      (comp-list-or-tuple exps e))
     ((<list> ,exps ,ctx)
@@ -163,11 +165,11 @@ every statement."
            ,(car (comp-block body (add2env env argnames gensyms))))))))))
 
 (define (comp-op op)
-  (define ops '((<gt> >) (<lt> <) (<gt-e> >=) (<lt-e> <=) (<eq> equal?)))
+  (define ops '((<gt> . >) (<lt> . <) (<gt-e> . >=) (<lt-e> . <=) (<eq> . equal?)))
   `(toplevel ,(lookup op ops)))
 
 (define (comp-bin-op op e1 e2 env)
-  (define ops '((<add> +)))
+  (define ops '((<add> . +) (<sub> . -)))
   `(call (toplevel ,(lookup op ops)) ,(car (comp e1 env)) ,(car (comp e2 env))))
 
 ;;;; The documentation for let-values in tree-il is incorrect. This is
