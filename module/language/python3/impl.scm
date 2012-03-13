@@ -23,7 +23,8 @@
 
 (define-module (language python3 impl)
   #:use-module (srfi srfi-1)
-  #:export (fun-match-arguments))
+  #:use-module (system base pmatch)
+  #:export (compare fun-match-arguments))
 
 (define (fun-match-arguments id argnames has-stararg rest args inits)
   "`rest' represents all arguments passed to a method call. `args' is
@@ -46,3 +47,16 @@ the right arguments in the right order for use in a function body."
           (call-with-values
             (lambda () (split-at first arg-len))
             (lambda (a b) `(,@a ,b)))))))
+
+(define debug (@@ (language python3 compile-tree-il) debug))
+
+(define (compare os vs)
+  (let lp ((ops os) (vals vs))
+    (pmatch ops
+      ((,op . '())
+       (apply op vals))
+      ((,op . ,rest)
+       (if (op (car vals) (cadr vals))
+           (lp (cdr ops) (cdr vals))
+           #f))
+      ((,a) (debug "not matched" ops)))))
