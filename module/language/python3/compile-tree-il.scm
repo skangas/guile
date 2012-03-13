@@ -72,7 +72,6 @@ corresponding tree-il expression."
      (comp-block stmts e))
 
     ;; stmt code
-
     ((<function-def> ,id ,args ,body ,decos ,ret)
      (list
       `(define ,id
@@ -92,6 +91,13 @@ corresponding tree-il expression."
      (comp exp e))
 
     ;; expressions
+    ((<bin-op> ,eleft ,op ,eright)
+     (list (comp-bin-op op eleft eright e) e))
+    ((<compare> ,eleft ,ops ,rest)
+     (let ((cops (til-list (map (lambda (x) (comp-op x)) ops)))
+           (vals (til-list (cons (car (comp eleft e))
+                                 (map (lambda (x) (car (comp x e))) rest)))))
+       (list (@impl compare cops vals) e)))
     ((<num> ,n)
      (list `(const ,n) e))
     ((<name> ,name ,ctx)
@@ -99,7 +105,9 @@ corresponding tree-il expression."
     ((<tuple> ,exps ,ctx)
      (comp-list-or-tuple exps e))
     ((<list> ,exps ,ctx)
-     (comp-list-or-tuple exps e))))
+     (comp-list-or-tuple exps e))
+    (,any
+     (debug "not matched:" any))))
 
 (define (comp-list-or-tuple exps env)
   "Compiles a list or tuple expression into a list of values."
@@ -153,6 +161,14 @@ every statement."
          (lambda-case
           ((,argnames #f #f () () ,gensyms)
            ,(car (comp-block body (add2env env argnames gensyms))))))))))
+
+(define (comp-op op)
+  (define ops '((<gt> >) (<lt> <) (<gt-e> >=) (<lt-e> <=) (<eq> equal?)))
+  `(toplevel ,(lookup op ops)))
+
+(define (comp-bin-op op e1 e2 env)
+  (define ops '((<add> +)))
+  `(call (toplevel ,(lookup op ops)) ,(car (comp e1 env)) ,(car (comp e2 env))))
 
 ;;;; The documentation for let-values in tree-il is incorrect. This is
 ;;;; an example for how it could be used.
