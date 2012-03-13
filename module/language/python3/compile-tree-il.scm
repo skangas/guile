@@ -103,7 +103,7 @@ corresponding tree-il expression."
 
 (define (comp-list-or-tuple exps env)
   "Compiles a list or tuple expression into a list of values."
-  (list `(primcall list ,@(map (lambda (x) (car (comp x env))) exps)) env))
+  (list (til-list (map (lambda (x) (car (comp x env))) exps)) env))
 
 (define (comp-block stmts env)
   "Compiles a block of statements. Updates the environment in between
@@ -165,6 +165,11 @@ every statement."
   "A shorthand for lexical references where the symbol is the same as
 the gensym."
   `(lexical ,sym ,sym))
+
+(define (til-list a)
+  "Makes a list of values into a tree-il list."
+  `(primcall list ,@a))
+
 
 (define (test str)
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
