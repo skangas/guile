@@ -92,6 +92,10 @@ corresponding tree-il expression."
     ;; expressions
     ((<bin-op> ,eleft ,op ,eright)
      (list (comp-bin-op op eleft eright e) e))
+    ((<if> ,b ,e1 ,e2)
+     (list `(if ,(car (comp b e))
+                ,(car (comp-block e1 e))
+                ,(car (comp-block e2 e))) e))
     ((<compare> ,eleft ,ops ,rest)
      (let ((cops (til-list (map (lambda (x) (comp-op x)) ops)))
            (vals (til-list (cons (car (comp eleft e))
