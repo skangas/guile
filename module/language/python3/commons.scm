@@ -61,7 +61,6 @@ that it use `acons' to create a pair of the elements."
 
 (define (load-file-dir module)
   "The load directory of the supplied module."
-  (debug "module =" module (module-filename module))
   (let* ((filename (module-filename module))
          (pos (and filename (string-rindex filename #\/))))
     (if pos
