@@ -131,7 +131,7 @@ every statement."
 
 (define (add2env env args values)
   "Adds a list of symbols to the supplied environment."
-  (append (zip args values) env))
+  (append (pzip args values) env))
 
 ;; Handles all types of calls not involving kwargs and keyword
 ;; arguments.

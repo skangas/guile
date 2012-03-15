@@ -33,9 +33,9 @@
 (define (display-ln obj)
   (display obj) (newline))
 
-(define (zip a b)
-  "Similar to the zip function found in (srfi srfi-1) except that it use
-`acons' to combine the elements."
+(define (pzip a b)
+  "`pzip' is similar to the `zip' function found in (srfi srfi-1) except
+that it use `acons' to create a pair of the elements."
   (let lp ((as a) (bs b) (out '()))
     (pmatch as
       (() (reverse! out))
