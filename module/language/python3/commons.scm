@@ -22,6 +22,7 @@
 ;;; Code:
 
 (define-module (language python3 commons)
+  #:use-module (system base pmatch)
   #:export (debug display-ln))
 
 (define (debug str . rest)
@@ -32,3 +33,14 @@
 (define (display-ln obj)
   (display obj) (newline))
 
+(define (zip a b)
+  "Similar to the zip function found in (srfi srfi-1) except that it use
+`acons' to combine the elements."
+  (let lp ((as a) (bs b) (out '()))
+    (pmatch as
+      (() (reverse! out))
+      ((,a . ,rest-as)
+       (pmatch bs
+         (() (reverse! out))
+         ((,b . ,rest-bs)
+          (lp rest-as rest-bs (acons a b out))))))))

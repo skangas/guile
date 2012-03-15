@@ -196,15 +196,3 @@ the gensym."
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
   (display-ln code)
   (compile-tree-il code '() '())))
-
-(define (zip a b)
-  "Similar to the zip function found in (srfi srfi-1) except that it use
-`cons' to combine the elements."
-  (let lp ((as a) (bs b) (out '()))
-    (pmatch as
-      (() (reverse out))
-      ((,a . ,rest-as)
-       (pmatch bs
-         (() (return out))
-         ((,b . ,rest-bs)
-          (lp rest-as rest-bs (cons (cons a b) out))))))))
