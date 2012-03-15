@@ -33,11 +33,13 @@
 ;; read into an s-exp.
 (define (read-python3 port)
   (system "rm -f /tmp/python-ast.tmp")
-  (let* ((code (read-python-string port))
-         (module (resolve-module '(language python3 parse)))
-         (command
-          (string-concatenate `("echo \"" ,code "\" | "
-                                ,(load-file-dir module)
-                                "/ast-parser.py > /tmp/python-ast.tmp"))))
-    (system command)
-    (read (open-file "/tmp/python-ast.tmp" "r"))))
+  (let ((code (read-python-string port)))
+    (if (eof-object? code)
+        code
+        (let* ((module (resolve-module '(language python3 parse)))
+               (command
+                (string-concatenate `("echo \"" ,code "\" | "
+                                      ,(load-file-dir module)
+                                      "/ast-parser.py > /tmp/python-ast.tmp"))))
+          (system command)
+          (read (open-file "/tmp/python-ast.tmp" "r"))))))

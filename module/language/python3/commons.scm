@@ -48,7 +48,9 @@ that it use `acons' to create a pair of the elements."
 (define (read-python-string port)
   (let lp ((out '()) (c (read-char port)) (last-c #f))
     (if (or (eof-object? c) (eq? c last-c #\newline))
-        (list->string (reverse! out))
+        (if (null? out)
+            c
+            (list->string (reverse! out)))
         (lp (cons c out) (read-char port) c))))
 
 (define (load-file-dir module)
