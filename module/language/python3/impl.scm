@@ -31,6 +31,9 @@
   "`rest' represents all arguments passed to a method call. `args' is
 the values passed to the `args' keyword argument. This method returns
 the right arguments in the right order for use in a function body."
+  (define (err-len)
+    (error (string-concatenate `("Wrong number of arguments for "
+                                 ,(symbol->string id)))))
   (let ((arg-len (if has-stararg
                      (1- (length argnames))
                      (length argnames))))
@@ -42,12 +45,13 @@ the right arguments in the right order for use in a function body."
            (inits+first-len (+ (length inits) first-len)))
       (if (< first-len arg-len)
           (if (< inits+first-len arg-len)
-              (error (string-concatenate `("Wrong number of arguments for "
-                                           ,(symbol->string id))))
+              (err-len)
               (append! first (drop inits (- inits+first-len arg-len)) '(())))
-          (call-with-values
-            (lambda () (split-at first arg-len))
-            (lambda (a b) `(,@a ,b)))))))
+          (if (and (not has-stararg) (> first-len arg-len))
+              (err-len)
+              (call-with-values
+                  (lambda () (split-at first arg-len))
+                (lambda (a b) `(,@a ,b))))))))
 
 (define (compare os vs)
   (let lp ((ops os) (vals vs))
