@@ -125,7 +125,9 @@ every statement."
        (let ((ret (comp stmt e)))
          (lp rest (cons (car ret) out) (cadr ret))))
       ('()
-       (list `(begin ,@(reverse! out)) env)))))
+       (if (null? out)
+           (list '(void) env)
+           (list `(begin ,@(reverse! out)) env))))))
 
 (define (add2env env args values)
   "Adds a list of symbols to the supplied environment."
