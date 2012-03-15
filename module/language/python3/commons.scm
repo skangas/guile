@@ -46,18 +46,10 @@ that it use `acons' to create a pair of the elements."
           (lp rest-as rest-bs (acons a b out))))))))
 
 (define (read-python-string port)
-  (let* ((c (read-char port))
-         (last (list #\newline))
-         (snd-last '())
-         (str last))
-    (while (not (eof-object? c))
-           (set-car! last c)
-           (set-cdr! last (list #\newline))
-           (set! snd-last last)
-           (set! last (cdr last))
-           (set! c (read-char port)))
-    (set-cdr! snd-last '())
-    (list->string str)))
+  (let lp ((out '()) (c (read-char port)) (last-c #f))
+    (if (or (eof-object? c) (eq? c last-c #\newline))
+        (list->string (reverse! out))
+        (lp (cons c out) (read-char port) c))))
 
 (define (load-file-dir module)
   "The load directory of the supplied module."
