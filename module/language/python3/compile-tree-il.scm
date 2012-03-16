@@ -174,7 +174,9 @@ every statement."
   `(toplevel ,(lookup op ops)))
 
 (define (comp-bin-op op e1 e2 env)
-  (define ops '((<add> . +) (<sub> . -) (<mult> . *) (<div> . /)))
+  (define ops '((<add> . +) (<sub> . -) (<mult> . *) (<div> . /)
+                (<floor-div> . floor-quotient)
+                (<mod> . euclidean-remainder)))
   `(call (toplevel ,(lookup op ops)) ,(car (comp e1 env)) ,(car (comp e2 env))))
 
 (define (comp-bool-op op lst env)
