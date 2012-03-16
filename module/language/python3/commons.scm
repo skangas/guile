@@ -22,7 +22,8 @@
 ;;; Code:
 
 (define-module (language python3 commons)
-  #:export (debug display-ln))
+  #:use-module (system base pmatch)
+  #:export (debug display-ln pzip read-python-string load-file-dir))
 
 (define (debug str . rest)
   (display str) (display " ")
@@ -32,3 +33,30 @@
 (define (display-ln obj)
   (display obj) (newline))
 
+(define (pzip a b)
+  "`pzip' is similar to the `zip' function found in (srfi srfi-1) except
+that it use `acons' to create a pair of the elements."
+  (let lp ((as a) (bs b) (out '()))
+    (pmatch as
+      (() (reverse! out))
+      ((,a . ,rest-as)
+       (pmatch bs
+         (() (reverse! out))
+         ((,b . ,rest-bs)
+          (lp rest-as rest-bs (acons a b out))))))))
+
+(define (read-python-string port)
+  (let lp ((out '()) (c (read-char port)) (last-c #f))
+    (if (or (eof-object? c) (eq? c last-c #\newline))
+        (if (null? out)
+            c
+            (list->string (reverse! out)))
+        (lp (cons c out) (read-char port) c))))
+
+(define (load-file-dir module)
+  "The load directory of the supplied module."
+  (let* ((filename (module-filename module))
+         (pos (and filename (string-rindex filename #\/))))
+    (if pos
+        (substring filename 0 pos)
+        filename)))

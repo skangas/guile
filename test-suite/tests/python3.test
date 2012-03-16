@@ -4,7 +4,9 @@
   :use-module (test-suite lib)
   :use-module (language python3 parse)
   :use-module (ice-9 regex)
-  :use-module (srfi srfi-1))
+  :use-module (ice-9 eval-string)
+  :use-module (srfi srfi-1)
+  :use-module (language python3 commons))
 
 (define (test-parse str expected)
   "Runs a parse test."
@@ -41,21 +43,6 @@ failed."
         (substring filename 0 pos)
         filename)))
 
-(define (read-string port)
-  "Takes a port and returns the string that could be read from the port
-until eof."
-  (let* ((c (read-char port))
-         (last (list #\newline))
-         (snd-last '())
-         (str last))
-    (while (not (eof-object? c))
-           (set-car! last c)
-           (set-cdr! last (list #\newline))
-           (set! snd-last last)
-           (set! last (cdr last))
-           (set! c (read-char port)))
-    (set-cdr! snd-last '())
-    (list->string str)))
 
 (define (split-string-with split str)
   "Splits a string with the given split string."
@@ -79,7 +66,7 @@ python3 directory. It then adds all parsed test cases to tests-map."
                                      "/python3/"
                                      ,filename)))
          (port (open-file file "r"))
-         (str (string-trim-both (read-string port)))
+         (str (string-trim-both (drain-input port)))
          (test-group (assq group tests-map))
          (tests (split-string-with "### END CODE" str)))
     (if (not test-group)

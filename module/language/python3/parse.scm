@@ -22,6 +22,7 @@
 ;;; Code:
 
 (define-module (language python3 parse)
+  #:use-module (language python3 commons)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 lineio)
   #:export (read-python3))
@@ -32,29 +33,13 @@
 ;; read into an s-exp.
 (define (read-python3 port)
   (system "rm -f /tmp/python-ast.tmp")
-  (let* ((code (read-string port))
-         (command (string-concatenate `("echo \"" ,code "\" | " ,load-file-dir
-                                        "/ast-parser.py > /tmp/python-ast.tmp"))))
-    (system command)
-    (read (open-file "/tmp/python-ast.tmp" "r"))))
-
-(define (read-string port)
-  (let* ((c (read-char port))
-         (last (list #\newline))
-         (snd-last '())
-         (str last))
-    (while (not (eof-object? c))
-           (set-car! last c)
-           (set-cdr! last (list #\newline))
-           (set! snd-last last)
-           (set! last (cdr last))
-           (set! c (read-char port)))
-    (set-cdr! snd-last '())
-    (list->string str)))
-
-(define load-file-dir
-  (let* ((filename (module-filename (current-module)))
-         (pos (string-rindex filename #\/)))
-    (if pos
-        (substring filename 0 pos)
-        filename)))
+  (let ((code (read-python-string port)))
+    (if (eof-object? code)
+        code
+        (let* ((module (resolve-module '(language python3 parse)))
+               (command
+                (string-concatenate `("echo \"" ,code "\" | "
+                                      ,(load-file-dir module)
+                                      "/ast-parser.py > /tmp/python-ast.tmp"))))
+          (system command)
+          (read (open-file "/tmp/python-ast.tmp" "r"))))))

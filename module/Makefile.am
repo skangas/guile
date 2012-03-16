@@ -148,6 +148,8 @@ ELISP_LANG_SOURCES =				\
   language/elisp/spec.scm
 
 PYTHON3_LANG_SOURCES = \
+  language/python3/commons.scm			\
+  language/python3/impl.scm			\
   language/python3/parse.scm			\
   language/python3/compile-tree-il.scm		\
   language/python3/spec.scm
