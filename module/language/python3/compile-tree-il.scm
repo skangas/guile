@@ -178,7 +178,10 @@ every statement."
 (define (comp-bin-op op e1 e2 env)
   (define ops '((<add> . +) (<sub> . -) (<mult> . *) (<div> . /)
                 (<floor-div> . floor-quotient)
-                (<mod> . euclidean-remainder)))
+                (<mod> . euclidean-remainder)
+                (<bit-xor> . logxor)
+                (<bit-and> . logand)
+                (<bit-or> . logior)))
   (let ((ce1 (car (comp e1 env)))
         (ce2 (car (comp e2 env))))
     (pmatch op
