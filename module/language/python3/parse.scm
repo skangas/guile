@@ -31,8 +31,9 @@
   (let ((code (read-python-string port)))
     (if (eof-object? code)
         code
-        (let* ((command (string-concatenate `("echo \"" ,code "\" "
-                                              "| ast-parser.py")))
+        (let* ((dir (load-file-dir (resolve-module '(language python3 parse))))
+               (command (string-concatenate `("echo \"" ,code "\" "
+                                              "| " ,dir "/ast-parser.py")))
                (port (open-pipe command OPEN_READ)))
           (read port)))))
 
