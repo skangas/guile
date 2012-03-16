@@ -172,7 +172,7 @@ every statement."
   `(toplevel ,(lookup op ops)))
 
 (define (comp-bin-op op e1 e2 env)
-  (define ops '((<add> . +) (<sub> . -)))
+  (define ops '((<add> . +) (<sub> . -) (<mult> . *) (<div> . /)))
   `(call (toplevel ,(lookup op ops)) ,(car (comp e1 env)) ,(car (comp e2 env))))
 
 ;;;; The documentation for let-values in tree-il is incorrect. This is

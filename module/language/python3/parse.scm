@@ -23,23 +23,17 @@
 
 (define-module (language python3 parse)
   #:use-module (language python3 commons)
-  #:use-module (srfi srfi-1)
-  #:use-module (ice-9 lineio)
+  #:use-module (ice-9 popen)
+  #:use-module (rnrs io ports)
   #:export (read-python3))
 
-;; Since I couldn't find some way to capture what is written to stdin
-;; when running (system "some-command") this method currently dumps the
-;; ast produced by the ast parser to a temporary file which is later
-;; read into an s-exp.
 (define (read-python3 port)
-  (system "rm -f /tmp/python-ast.tmp")
   (let ((code (read-python-string port)))
     (if (eof-object? code)
         code
-        (let* ((module (resolve-module '(language python3 parse)))
-               (command
-                (string-concatenate `("echo \"" ,code "\" | "
-                                      ,(load-file-dir module)
-                                      "/ast-parser.py > /tmp/python-ast.tmp"))))
-          (system command)
-          (read (open-file "/tmp/python-ast.tmp" "r"))))))
+        (let* ((command (string-concatenate `("echo \"" ,code "\" "
+                                              "| ast-parser.py")))
+               (port (open-pipe command OPEN_READ)))
+          (read port)))))
+
+
