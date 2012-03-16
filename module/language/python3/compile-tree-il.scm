@@ -85,6 +85,8 @@ corresponding tree-il expression."
     ;; expressions
     ((<bin-op> ,eleft ,op ,eright)
      (list (comp-bin-op op eleft eright e) e))
+    ((<bool-op> ,op ,lst)
+     (list (comp-bool-op op lst)))
     ((<if> ,b ,e1 ,e2)
      (list `(if ,(car (comp b e))
                 ,(car (comp-block e1 e))
@@ -174,6 +176,10 @@ every statement."
 (define (comp-bin-op op e1 e2 env)
   (define ops '((<add> . +) (<sub> . -) (<mult> . *) (<div> . /)))
   `(call (toplevel ,(lookup op ops)) ,(car (comp e1 env)) ,(car (comp e2 env))))
+
+(define (comp-bool-op op lst)
+  ;; WIP /SK
+  #t)
 
 ;;;; The documentation for let-values in tree-il is incorrect. This is
 ;;;; an example for how it could be used.
