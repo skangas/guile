@@ -179,7 +179,15 @@ every statement."
   (define ops '((<add> . +) (<sub> . -) (<mult> . *) (<div> . /)
                 (<floor-div> . floor-quotient)
                 (<mod> . euclidean-remainder)))
-  `(call (toplevel ,(lookup op ops)) ,(car (comp e1 env)) ,(car (comp e2 env))))
+  (let ((ce1 (car (comp e1 env)))
+        (ce2 (car (comp e2 env))))
+    (pmatch op
+      (<l-shift>
+       `(call (toplevel ash) ,ce1 ,ce2))
+      (<r-shift>
+       `(call (toplevel ash) ,ce1 (call (toplevel -) ,ce2)))
+      (,any
+       `(call (toplevel ,(lookup op ops)) ,ce1 ,ce2)))))
 
 (define (comp-bool-op op lst env)
   (define (and b a)
