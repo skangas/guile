@@ -87,6 +87,8 @@ corresponding tree-il expression."
      (list (comp-bin-op op eleft eright e) e))
     ((<bool-op> ,op ,lst)
      (list (comp-bool-op op lst e) e))
+    ((<unary-op> ,op ,arg)
+     (list (comp-unary-op op arg e) e))
     ((<if> ,b ,e1 ,e2)
      (list `(if ,(car (comp b e))
                 ,(car (comp-block e1 e))
@@ -190,6 +192,11 @@ every statement."
        (reduce and (const #t) clst))
       (<or>
        (reduce or (const #f) clst)))))
+
+(define (comp-unary-op op arg env)
+  (pmatch op
+    (<not>
+     `(if ,(car (comp arg env)) (const #f) (const #t)))))
 
 ;;;; The documentation for let-values in tree-il is incorrect. This is
 ;;;; an example for how it could be used.
