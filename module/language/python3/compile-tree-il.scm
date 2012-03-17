@@ -79,6 +79,8 @@ corresponding tree-il expression."
               (econs name name e)))
        (((<tuple> ,names))
         (list #f #f))))
+    (<pass>
+     (list '(void) e))
     ((<expr> ,exp)
      (comp exp e))
 
