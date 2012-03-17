@@ -63,3 +63,75 @@ the right arguments in the right order for use in a function body."
            (lp (cdr ops) (cdr vals))
            #f))
       ((,a) (debug "not matched" ops)))))
+
+;;; WIP (experimental): Python object implementation
+
+;; NB: A dictionary is simply a VHash
+
+(use-modules (ice-9 vlist))
+
+;; Create an object
+(define (create-object type value id)
+  `(alist->vhash
+    ((type . ,type)
+     (value . ,value)
+     (id . 0) ;; FIXME: use gensym
+     ))) 
+
+;; corresponds to type(name, bases, dict)
+(define (create-class name bases dict)
+  `(alist->vhash
+    ((name . ,name)
+     (bases . ,bases)
+     (dict . ,dict))))
+
+(define (is-callable? obj))
+
+(define (perform-call obj))
+
+;;; Standard classes
+
+(define class-object
+  (create-class "object" '() (alist->vhash '((__doc__ . "The most base object")
+                                             (__str__ . #f)))))
+(define class-not-implemented
+  (create-class "NotImplementedType" '("object") '(__str__ . (const "NotImplemented"))))
+
+(define class-none
+  (create-class "None" '("object") '("object") '(__str__ . (const "None"))))
+
+(define class-ellipsis
+  (create-class "Ellipsis" '("object") '(;;???
+                                         )))
+
+;; >>> type(foo)
+;; <class 'function'>
+;; >>> dir(type(foo))
+;; ['__annotations__', '__call__', '__class__', '__closure__', '__code__',
+;; '__defaults__', '__delattr__', '__dict__', '__doc__', '__eq__',
+;; '__format__', '__ge__', '__get__', '__getattribute__', '__globals__',
+;; '__gt__', '__hash__', '__init__', '__kwdefaults__', '__le__',
+;; '__lt__', '__module__', '__name__', '__ne__', '__new__',
+;; '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__',
+;; '__str__', '__subclasshook__']
+;; 
+;; >>> object().__class__
+;; <class 'object'>
+;; >>> dir(object().__class__)
+;; ['__class__', '__delattr__', '__doc__', '__eq__', '__format__',
+;; '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__',
+;; '__le__', '__lt__', '__ne__', '__new__', '__reduce__',
+;; '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__',
+;; '__subclasshook__']
+;; 
+;; >>> object().__class__.__class__
+;; <class 'type'>
+;; >>> dir(object().__class__.__class__)
+;; ['__abstractmethods__', '__base__', '__bases__', '__basicsize__', '__call__',
+;; '__class__', '__delattr__', '__dict__', '__dictoffset__', '__doc__',
+;; '__eq__', '__flags__', '__format__', '__ge__', '__getattribute__',
+;; '__gt__', '__hash__', '__init__', '__instancecheck__', '__itemsize__',
+;; '__le__', '__lt__', '__module__', '__mro__', '__name__',
+;; '__ne__', '__new__', '__prepare__', '__reduce__', '__reduce_ex__',
+;; '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasscheck__',
+;; '__subclasses__', '__subclasshook__', '__weakrefoffset__', 'mro']
