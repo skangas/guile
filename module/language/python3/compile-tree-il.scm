@@ -51,7 +51,7 @@
 corresponding tree-il expression."
   (let ((ret (comp exp '())))
     (values
-     (parse-tree-il (car ret))
+     (parse-tree-il ret)
      env
      env)))
 
@@ -65,52 +65,50 @@ corresponding tree-il expression."
 
     ;; stmt code
     ((<function-def> ,id ,args ,body ,decos ,ret)
-     (list
-      `(define ,id
-         (lambda ()
-           ,(comp-fun-body id args body e)))
-      (econs id id e)))
+     `(define ,id
+        (lambda ()
+          ,(comp-fun-body id args body e))))
     ((<return> ,exp)
-     (list `(primcall return ,(car (comp exp e))) e))
+     `(primcall return ,(comp exp e)))
     ((<assign> ,targets ,value)
      (pmatch targets
        (((<name> ,name <store>))
-        (list `(define ,name ,(car (comp value e)))
-              (econs name name e)))
+        `(define ,name ,(comp value e)))
        (((<tuple> ,names))
-        (list #f #f))))
+        ;; tuples, lists and starred not implemented
+        #f)))
     (<pass>
-     (list '(void) e))
+     '(void))
     ((<expr> ,exp)
      (comp exp e))
 
     ;; expressions
     ((<bin-op> ,eleft ,op ,eright)
-     (list (comp-bin-op op eleft eright e) e))
+     (comp-bin-op op eleft eright e))
     ((<bool-op> ,op ,lst)
-     (list (comp-bool-op op lst e) e))
+     (comp-bool-op op lst e))
     ((<unary-op> ,op ,arg)
-     (list (comp-unary-op op arg e) e))
+     (comp-unary-op op arg e))
     ((<if> ,b ,e1 ,e2)
-     (list `(if ,(car (comp b e))
-                ,(car (comp-block #f e1 e))
-                ,(car (comp-block #f e2 e))) e))
+     `(if ,(comp b e)
+          ,(comp-block #f e1 e)
+          ,(comp-block #f e2 e)))
     ((<compare> ,eleft ,ops ,rest)
      (let ((cops (til-list (map (lambda (x) (comp-op x)) ops)))
-           (vals (til-list (cons (car (comp eleft e))
-                                 (map (lambda (x) (car (comp x e))) rest)))))
-       (list (@impl compare cops vals) e)))
+           (vals (til-list (cons (comp eleft e)
+                                 (map (lambda (x) (comp x e)) rest)))))
+       (@impl compare cops vals)))
     ((<call> ,fun ,args ,kws, ,stararg ,kwargs)
-     (let ((c-fun (car (comp fun e)))
-           (c-args (map (lambda (x) (car (comp x e))) args)))
-       (list `(call ,c-fun ,@c-args) e)))
+     (let ((c-fun (comp fun e))
+           (c-args (map (lambda (x) (comp x e)) args)))
+       `(call ,c-fun ,@c-args)))
     ((<num> ,n)
-     (list `(const ,n) e))
+     `(const ,n))
     ((<name> ,name ,ctx)
      (let ((ret (lookup name e)))
-       (list (if ret
-                 `(lexical ,name ,ret)
-                 (-> (toplevel name))) e)))
+       (if ret
+           `(lexical ,name ,ret)
+           (-> (toplevel name)))))
     ((<tuple> ,exps ,ctx)
      (comp-list-or-tuple exps e))
     ((<list> ,exps ,ctx)
@@ -120,7 +118,7 @@ corresponding tree-il expression."
 
 (define (comp-list-or-tuple exps env)
   "Compiles a list or tuple expression into a list of values."
-  (list (til-list (map (lambda (x) (car (comp x env))) exps)) env))
+  (til-list (map (lambda (x) (car (comp x env))) exps)))
 
 (define (comp-block toplevel stmts env)
   "Compiles a block of statements. Updates the environment in between
@@ -129,29 +127,28 @@ every statement."
     (pmatch targets
       (((<name> ,id <store>))
        (list id))))
-  (let lp ((in stmts) (out '()) (e env))
+  (let lp ((in stmts) (out '()))
     (pmatch in
       (((<assign> ,targets ,values) . ,rest)
        (guard (not toplevel))
        (let* ((argnames (get-ids targets))
               (gensyms  (map-gensym argnames))
-              (args (car (comp values e)))
+              (args (comp values env))
               (stmt
                `(primcall call-with-values
                  ,(@impl assign-match-arguments `(const ,targets) args)
                  (lambda ()
                    (lambda-case
                     ((,argnames #f #f () () ,gensyms)
-                     ,(car (comp-block #f rest
-                                       (add2env env argnames gensyms)))))))))
-         (lp '() (cons stmt out) e)))
+                     ,(comp-block #f rest
+                                  (add2env env argnames gensyms))))))))
+         (lp '() (cons stmt out))))
       ((,stmt . ,rest)
-       (let ((ret (comp stmt e)))
-         (lp rest (cons (car ret) out) (cadr ret))))
+       (lp rest (cons (comp stmt env) out)))
       ('()
        (if (null? out)
-           (list '(void) env)
-           (list `(begin ,@(reverse! out)) env))))))
+           '(void)
+           `(begin ,@(reverse! out)))))))
 
 (define (add2env env args values)
   "Adds a list of symbols to the supplied environment."
@@ -166,7 +163,7 @@ every statement."
                        (append (map car (car args)) (list stararg))
                        (or (map car (car args)) stararg '())))
          (argconsts (map (lambda (x) `(const ,x)) argnames))
-         (inits (map (lambda (x) (car (comp x env))) (seventh args)))
+         (inits (map (lambda (x) (comp x env)) (seventh args)))
          (rest (gensym "rest$"))
          (argsym (gensym "args$"))
          ;; (kwargsym (gensym "kwargs$"))    kwargs not implemented yet
@@ -187,7 +184,7 @@ every statement."
                            `(primcall list ,@inits)))
          (lambda-case
           ((,argnames #f #f () () ,gensyms)
-           ,(car (comp-block #f body (add2env env argnames gensyms))))))))))
+           ,(comp-block #f body (add2env env argnames gensyms)))))))))
 
 (define (comp-op op)
   (define ops '((<gt> . >) (<lt> . <) (<gt-e> . >=) (<lt-e> . <=) (<eq> . equal?)))
@@ -200,8 +197,8 @@ every statement."
                 (<bit-xor> . logxor)
                 (<bit-and> . logand)
                 (<bit-or> . logior)))
-  (let ((ce1 (car (comp e1 env)))
-        (ce2 (car (comp e2 env))))
+  (let ((ce1 (comp e1 env))
+        (ce2 (comp e2 env)))
     (pmatch op
       (<l-shift>
        `(call (toplevel ash) ,ce1 ,ce2))
@@ -215,7 +212,7 @@ every statement."
     `(if ,a ,b ,a))
   (define (or b a)
     `(if ,a ,a ,b))
-  (let ((clst (map (lambda (x) (car (comp x env))) lst)))
+  (let ((clst (map (lambda (x) (comp x env)) lst)))
     (pmatch op
       (<and>
        (reduce and (const #t) clst))
@@ -225,7 +222,7 @@ every statement."
 (define (comp-unary-op op arg env)
   (pmatch op
     (<not>
-     `(if ,(car (comp arg env)) (const #f) (const #t)))))
+     `(if ,(comp arg env) (const #f) (const #t)))))
 
 ;;;; The documentation for let-values in tree-il is incorrect. This is
 ;;;; an example for how it could be used.
