@@ -100,14 +100,45 @@ the right arguments in the right order for use in a function body."
 ;; >>> object.__class__
 ;; <class 'type'>
 ;; >>> dir(object.__class__)
-;; ['__abstractmethods__', '__base__', '__bases__', '__basicsize__', '__call__',
-;; '__class__', '__delattr__', '__dict__', '__dictoffset__', '__doc__',
-;; '__eq__', '__flags__', '__format__', '__ge__', '__getattribute__',
-;; '__gt__', '__hash__', '__init__', '__instancecheck__', '__itemsize__',
-;; '__le__', '__lt__', '__module__', '__mro__', '__name__',
-;; '__ne__', '__new__', '__prepare__', '__reduce__', '__reduce_ex__',
-;; '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasscheck__',
-;; '__subclasses__', '__subclasshook__', '__weakrefoffset__', 'mro']
+;; '__abstractmethods__'  -> Unkown, not necessary to implement
+;; '__base__'             ->
+;; '__bases__'            ->
+;; '__basicsize__'        ->
+;; '__call__'             -> Is called if the object is called as a method
+;; '__class__'            -> Pointer to the class object
+;; '__delattr__'          -> Called when deleting a attribute using `delete foo.bar`
+;; '__dict__'             -> A dict containing all the attributes of the object
+;; '__dictoffset__'       -> 
+;; '__doc__'              ->
+;; '__eq__'               ->
+;; '__flags__'            ->
+;; '__format__'           ->
+;; '__ge__'               ->
+;; '__getattribute__'     ->
+;; '__gt__'               ->
+;; '__hash__'             ->
+;; '__init__'             ->
+;; '__instancecheck__'    ->
+;; '__itemsize__'         ->
+;; '__le__'               ->
+;; '__lt__'               ->
+;; '__module__'           ->
+;; '__mro__'              ->
+;; '__name__'             ->
+;; '__ne__'               ->
+;; '__new__'              ->
+;; '__prepare__'          ->
+;; '__reduce__'           ->
+;; '__reduce_ex__'        ->
+;; '__repr__'             ->
+;; '__setattr__'          ->
+;; '__sizeof__'           ->
+;; '__str__'              ->
+;; '__subclasscheck__'    ->
+;; '__subclasses__'       ->
+;; '__subclasshook__'     ->
+;; '__weakrefoffset__'    ->
+;; 'mro']                 ->
 
 (define py3-class-type (make <py3-object>))
 
@@ -117,10 +148,26 @@ the right arguments in the right order for use in a function body."
 ;; >>> object().__class__
 ;; <class 'object'>
 ;; >>> dir(object().__class__)
-;; ['__class__', '__delattr__', '__doc__', '__eq__', '__format__',
-;; '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__',
-;; '__le__', '__lt__', '__ne__', '__new__', '__reduce__',
-;; '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__',
+;; ['__class__'
+;; '__delattr__'
+;; '__doc__'
+;; '__eq__'
+;; '__format__'
+;; '__ge__'
+;; '__getattribute__'
+;; '__gt__'
+;; '__hash__'
+;; '__init__'
+;; '__le__'
+;; '__lt__'
+;; '__ne__'
+;; '__new__'
+;; '__reduce__'
+;; '__reduce_ex__'
+;; '__repr__'
+;; '__setattr__'
+;; '__sizeof__'
+;; '__str__'
 ;; '__subclasshook__']
 
 ;; (define class-object
