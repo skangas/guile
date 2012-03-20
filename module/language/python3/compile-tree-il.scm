@@ -61,7 +61,7 @@ corresponding tree-il expression."
   (pmatch x
     ;; module code
     ((<module> ,stmts)
-     (comp-block stmts e))
+     (comp-block #t stmts e))
 
     ;; stmt code
     ((<function-def> ,id ,args ,body ,decos ,ret)
@@ -93,8 +93,8 @@ corresponding tree-il expression."
      (list (comp-unary-op op arg e) e))
     ((<if> ,b ,e1 ,e2)
      (list `(if ,(car (comp b e))
-                ,(car (comp-block e1 e))
-                ,(car (comp-block e2 e))) e))
+                ,(car (comp-block #f e1 e))
+                ,(car (comp-block #f e2 e))) e))
     ((<compare> ,eleft ,ops ,rest)
      (let ((cops (til-list (map (lambda (x) (comp-op x)) ops)))
            (vals (til-list (cons (car (comp eleft e))
@@ -122,11 +122,29 @@ corresponding tree-il expression."
   "Compiles a list or tuple expression into a list of values."
   (list (til-list (map (lambda (x) (car (comp x env))) exps)) env))
 
-(define (comp-block stmts env)
+(define (comp-block toplevel stmts env)
   "Compiles a block of statements. Updates the environment in between
 every statement."
+  (define (get-ids targets)
+    (pmatch targets
+      (((<name> ,id <store>))
+       (list id))))
   (let lp ((in stmts) (out '()) (e env))
     (pmatch in
+      (((<assign> ,targets ,values) . ,rest)
+       (guard (not toplevel))
+       (let* ((argnames (get-ids targets))
+              (gensyms  (map-gensym argnames))
+              (args (car (comp values e)))
+              (stmt
+               `(primcall call-with-values
+                 ,(@impl assign-match-arguments `(const ,targets) args)
+                 (lambda ()
+                   (lambda-case
+                    ((,argnames #f #f () () ,gensyms)
+                     ,(car (comp-block #f rest
+                                       (add2env env argnames gensyms)))))))))
+         (lp '() (cons stmt out) e)))
       ((,stmt . ,rest)
        (let ((ret (comp stmt e)))
          (lp rest (cons (car ret) out) (cadr ret))))
@@ -169,7 +187,7 @@ every statement."
                            `(primcall list ,@inits)))
          (lambda-case
           ((,argnames #f #f () () ,gensyms)
-           ,(car (comp-block body (add2env env argnames gensyms))))))))))
+           ,(car (comp-block #f body (add2env env argnames gensyms))))))))))
 
 (define (comp-op op)
   (define ops '((<gt> . >) (<lt> . <) (<gt-e> . >=) (<lt-e> . <=) (<eq> . equal?)))
