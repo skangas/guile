@@ -152,9 +152,7 @@ every statement."
          (rest (gensym "rest$"))
          (argsym (gensym "args$"))
          ;; (kwargsym (gensym "kwargs$"))    kwargs not implemented yet
-         (gensyms (map (lambda (x) (gensym (string-append
-                                            (symbol->string x) "$")))
-                       argnames)))
+         (gensyms (map-gensym argnames)))
     `(lambda-case
       ((() #f ,rest
         (#f (#:args ,argsym ,argsym)) ;; (#:kwargs ,kwargsym ,kwargsym))
@@ -227,6 +225,10 @@ the gensym."
   "Makes a list of values into a tree-il list."
   `(primcall list ,@a))
 
+(define (map-gensym argnames)
+  (map (lambda (x) (gensym (string-append
+                            (symbol->string x) "$")))
+       argnames))
 
 (define (test str)
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
