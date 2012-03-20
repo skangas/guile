@@ -41,15 +41,25 @@ import os, sys, ast
 def main(argv):
     if len(argv) < 2:
       pyfile = sys.stdin
-      astree = ast.parse(pyfile.read())
+      ch = getChunk(pyfile)
+      astree = ast.parse(ch)
     elif argv[1] == "--help" or argv[1] == "-h":
       print(__doc__)
       exit(1)
     else:
       pyfile = argv[1]
       with open(pyfile, 'r') as f:
-        astree = ast.parse(f.read(), pyfile)
+        ch = getChunk(f)
+        astree = ast.parse(ch, pyfile)
     print(universal(astree))
+
+def getChunk(f):
+    lines = []
+    for line in f:
+        if not line.strip():
+            break
+        lines.append(line)
+    return "\n".join(lines)
 
 def universal(x):
     if hasattr(x, "_fields"):
