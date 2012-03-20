@@ -23,7 +23,9 @@
 
 (define-module (language python3 impl)
   #:use-module (language python3 commons)
+  #:use-module (oop goops)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-69)
   #:use-module (system base pmatch)
   #:export (compare fun-match-arguments))
 
@@ -64,45 +66,107 @@ the right arguments in the right order for use in a function body."
            #f))
       ((,a) (debug "not matched" ops)))))
 
-;;; WIP (experimental): Python object implementation
+;;; Python object implementation
 
-;; NB: A dictionary is simply a VHash
+(define *undefined* ((@@ (oop goops) make-unbound)))
 
-(use-modules (ice-9 vlist))
+(define-class <py3-object> ()
+  (id #:getter py-id #:init-form (gensym "pyclass$"))
+  (type #:getter py-type #:init-keyword #:p)
+  (base #:init-keyword #:b)
+  (dict #:getter py-dict #:init-form (make-hash-table 7)))
 
-;; Create an object
-(define (create-object type value id)
-  `(alist->vhash
-    ((type . ,type)
-     (value . ,value)
-     (id . 0) ;; FIXME: use gensym
-     ))) 
+(define-method (aget (o <py3-object>) (p <string>))
+  (aget o (string->symbol p)))
 
-;; corresponds to type(name, bases, dict)
-(define (create-class name bases dict)
-  `(alist->vhash
-    ((name . ,name)
-     (bases . ,bases)
-     (dict . ,dict))))
+(define-method (aget (o <py3-object>) p)
+  (let ((h (hashq-get-handle (py-dict o) p)))
+    (if h
+        (cdr h)
+        *undefined* ;; FIXME: traverse base classes
+        )))
 
-(define (is-callable? obj))
+(define-method (aset (o <py3-object>) (p <string>) v)
+  (aset o (string->symbol p) v))
 
-(define (perform-call obj))
+(define-method (aset (o <py3-object>) p v)
+  (hashq-set! (py-dict o) p v))
+
+(define-method (aset (o <py3-object>)))
+
+;; >>> object().__class__.__class__
+;; <class 'type'>
+;; >>> dir(object().__class__.__class__)
+;; ['__abstractmethods__', '__base__', '__bases__', '__basicsize__', '__call__',
+;; '__class__', '__delattr__', '__dict__', '__dictoffset__', '__doc__',
+;; '__eq__', '__flags__', '__format__', '__ge__', '__getattribute__',
+;; '__gt__', '__hash__', '__init__', '__instancecheck__', '__itemsize__',
+;; '__le__', '__lt__', '__module__', '__mro__', '__name__',
+;; '__ne__', '__new__', '__prepare__', '__reduce__', '__reduce_ex__',
+;; '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasscheck__',
+;; '__subclasses__', '__subclasshook__', '__weakrefoffset__', 'mro']
+
+(define py3-class-type (make <py3-object>))
+;; (map (lambda (p v)
+;;        (aset p v py3-class-type)))
+
+;; >>> object().__class__
+;; <class 'object'>
+;; >>> dir(object().__class__)
+;; ['__class__', '__delattr__', '__doc__', '__eq__', '__format__',
+;; '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__',
+;; '__le__', '__lt__', '__ne__', '__new__', '__reduce__',
+;; '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__',
+;; '__subclasshook__']
+
+;; (define class-object
+;;   (create-class "object" '() (alist->vhash '((__doc__ . "The most base object")
+;;                                              (__str__ . #f)))))
+
+
+
+
+;;;
+
+;object
+
+;typ
+
+; object -> typ relationen
+
+; typklasser
+
+;; ;; Create an object
+;; (define (create-object type value id)
+;;   `(alist->vhash
+;;     ((type . ,type)
+;;      (value . ,value)
+;;      (id . 0) ;; FIXME: use gensym
+;;      ))) 
+
+;; ;; corresponds to type(name, bases, dict)
+;; (define (create-class name bases dict)
+;;   `(alist->vhash
+;;     ((name . ,name)
+;;      (bases . ,bases)
+;;      (dict . ,dict))))
 
 ;;; Standard classes
 
-(define class-object
-  (create-class "object" '() (alist->vhash '((__doc__ . "The most base object")
-                                             (__str__ . #f)))))
-(define class-not-implemented
-  (create-class "NotImplementedType" '("object") '(__str__ . (const "NotImplemented"))))
 
-(define class-none
-  (create-class "None" '("object") '("object") '(__str__ . (const "None"))))
 
-(define class-ellipsis
-  (create-class "Ellipsis" '("object") '(;;???
-                                         )))
+
+
+
+;; (define class-not-implemented
+;;   (create-class "NotImplementedType" '("object") '(__str__ . (const "NotImplemented"))))
+
+;; (define class-none
+;;   (create-class "None" '("object") '("object") '(__str__ . (const "None"))))
+
+;; (define class-ellipsis
+;;   (create-class "Ellipsis" '("object") '(;;???
+;;                                          )))
 
 ;; >>> type(foo)
 ;; <class 'function'>
@@ -115,23 +179,4 @@ the right arguments in the right order for use in a function body."
 ;; '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__',
 ;; '__str__', '__subclasshook__']
 ;; 
-;; >>> object().__class__
-;; <class 'object'>
-;; >>> dir(object().__class__)
-;; ['__class__', '__delattr__', '__doc__', '__eq__', '__format__',
-;; '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__',
-;; '__le__', '__lt__', '__ne__', '__new__', '__reduce__',
-;; '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__',
-;; '__subclasshook__']
 ;; 
-;; >>> object().__class__.__class__
-;; <class 'type'>
-;; >>> dir(object().__class__.__class__)
-;; ['__abstractmethods__', '__base__', '__bases__', '__basicsize__', '__call__',
-;; '__class__', '__delattr__', '__dict__', '__dictoffset__', '__doc__',
-;; '__eq__', '__flags__', '__format__', '__ge__', '__getattribute__',
-;; '__gt__', '__hash__', '__init__', '__instancecheck__', '__itemsize__',
-;; '__le__', '__lt__', '__module__', '__mro__', '__name__',
-;; '__ne__', '__new__', '__prepare__', '__reduce__', '__reduce_ex__',
-;; '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasscheck__',
-;; '__subclasses__', '__subclasshook__', '__weakrefoffset__', 'mro']
