@@ -25,7 +25,6 @@
   #:use-module (language python3 commons)
   #:use-module (oop goops)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-69)
   #:use-module (system base pmatch)
   #:export (compare fun-match-arguments))
 
@@ -92,11 +91,15 @@ the right arguments in the right order for use in a function body."
 (define-method (aset (o <py3-object>) p v)
   (hashq-set! (py-dict o) p v))
 
-(define-method (aset (o <py3-object>)))
+(define-method (aset (o <py3-object>) (ps <list>))
+  (map (lambda (pv)
+         (let ((p (car pv)) (v (cdr pv)))
+           (aset o p v)))
+       ps))
 
-;; >>> object().__class__.__class__
+;; >>> object.__class__
 ;; <class 'type'>
-;; >>> dir(object().__class__.__class__)
+;; >>> dir(object.__class__)
 ;; ['__abstractmethods__', '__base__', '__bases__', '__basicsize__', '__call__',
 ;; '__class__', '__delattr__', '__dict__', '__dictoffset__', '__doc__',
 ;; '__eq__', '__flags__', '__format__', '__ge__', '__getattribute__',
@@ -107,8 +110,9 @@ the right arguments in the right order for use in a function body."
 ;; '__subclasses__', '__subclasshook__', '__weakrefoffset__', 'mro']
 
 (define py3-class-type (make <py3-object>))
-;; (map (lambda (p v)
-;;        (aset p v py3-class-type)))
+
+(aset py3-class-type
+      '((__doc__ . "type(object) -> the object's type\ntype(name, bases, dict) -> a new type")))
 
 ;; >>> object().__class__
 ;; <class 'object'>
