@@ -143,6 +143,9 @@ every statement."
                      ,(comp-block #f rest
                                   (add2env env argnames gensyms))))))))
          (lp '() (cons stmt out))))
+      (((<expr> ,exp) . ,rest)
+       (guard (not toplevel))
+       (lp rest (cons `(begin ,(comp exp env) (void)) out)))
       ((,stmt . ,rest)
        (lp rest (cons (comp stmt env) out)))
       ('()
