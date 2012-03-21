@@ -10,21 +10,23 @@
 
 (define (test-parse str expected)
   "Runs a parse test."
-  (let ((cmp-fun (lambda (res exp) (not (equal? res exp)))))
-    (run-test read-python3 cmp-fun str expected)))
+  (let ((test-fun (lambda (str) (read-python3 (open-input-string str)))))
+    (run-test test-fun equal? str expected)))
 
 (define (test-eval str expected)
   "Runs a evaluation test. Dummy implementation until eval-string is
 possible"
-  #t)
+  ;; (debug "str =" str)
+  (let ((test-fun (lambda (str) (eval-string str #:lang 'python3))))
+    (run-test test-fun equal? str expected)))
 
 (define (run-test fun cmp-fun str expected)
   "Runs a test. Outputs some extra information in case a test case
 failed."
-  (let ((res (fun (open-input-string str))))
-    (if (cmp-fun res expected)
+  (let ((res (fun str)))
+    (if (not (cmp-fun res expected))
         (begin
-          (display (string-concatenate `("Test FAILED!\n"
+          (display (string-concatenate `("\nTest FAILED!\n"
                                          "Expected: "   ,(object->string expected)
                                          "\nGot:      " ,(object->string res))))
           (newline)
@@ -77,7 +79,7 @@ python3 directory. It then adds all parsed test cases to tests-map."
         (begin
           (pair-for-each
            (lambda (x)
-             (let* ((strs (split-string-with "### START CODE" (car x)))
+             (let* ((strs (split-string-with "### START CODE\n" (car x)))
                     (data (regexp-exec match-test-data (car strs))))
                (if data
                    (let ((name   (match:substring data 1))
