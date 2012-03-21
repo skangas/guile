@@ -132,13 +132,13 @@ the right arguments in the right order for use in a function body."
                       (__name__ . "NotImplementedType")))))
 
 (define none-type
-  #:d (make <py3-object>
-        (make-attrs '((__bases__ . (object))
+  (make <py3-object>
+    #:d (make-attrs '((__bases__ . (object))
                       (__name__ . "NoneType")))))
 
 (define ellipsis-type
-  #:d (make <py3-object>
-        (make-attrs '((__bases__ . (object))
+  (make <py3-object>
+    #:d (make-attrs '((__bases__ . (object))
                       (__name__ . "Ellipsis")))))
 
 ;; >>> object.__class__
