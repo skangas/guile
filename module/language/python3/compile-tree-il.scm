@@ -46,6 +46,24 @@
   "Looks up a given name in a given environment."
   (assq-ref env name))
 
+(define (add2env env args values)
+  "Adds a list of symbols to the supplied environment."
+  (append (pzip args values) env))
+
+(define (lex1 sym)
+  "A shorthand for lexical references where the symbol is the same as
+the gensym."
+  `(lexical ,sym ,sym))
+
+(define (til-list a)
+  "Makes a list of values into a tree-il list."
+  `(primcall list ,@a))
+
+(define (map-gensym argnames)
+  (map (lambda (x) (gensym (string-append
+                            (symbol->string x) "$")))
+       argnames))
+
 (define (compile-tree-il exp env opts)
     "Compiles a given python3 expressions in a given environment into a
 corresponding tree-il expression."
@@ -153,10 +171,6 @@ every statement."
            '(void)
            `(begin ,@(reverse! out)))))))
 
-(define (add2env env args values)
-  "Adds a list of symbols to the supplied environment."
-  (append (pzip args values) env))
-
 ;; Handles all types of calls not involving kwargs and keyword
 ;; arguments.
 (define (comp-fun-body id args body env)
@@ -233,20 +247,6 @@ every statement."
 ;;                   (primitive values)
 ;;                   (call (primitive list) (const 3) (const 4)))
 ;;   (lambda-case (((a b) #f #f () () (a b)) (lexical b b))))
-
-(define (lex1 sym)
-  "A shorthand for lexical references where the symbol is the same as
-the gensym."
-  `(lexical ,sym ,sym))
-
-(define (til-list a)
-  "Makes a list of values into a tree-il list."
-  `(primcall list ,@a))
-
-(define (map-gensym argnames)
-  (map (lambda (x) (gensym (string-append
-                            (symbol->string x) "$")))
-       argnames))
 
 (define (test str)
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
