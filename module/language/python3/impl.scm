@@ -74,9 +74,8 @@ the right arguments in the right order for use in a function body."
 
 (define-class <py3-object> ()
   (id #:getter py-id #:init-form (gensym "pyclass$"))
-  (type #:getter py-type #:init-keyword #:p)
-  (base #:init-keyword #:b)
-  (dict #:getter py-dict #:init-form (make-hash-table 7)))
+  (type #:getter py-type #:init-keyword #:t)
+  (dict #:getter py-dict #:init-keyword #:d))
 
 (define-method (aget (o <py3-object>) (p <string>))
   (aget o (string->symbol p)))
@@ -99,6 +98,48 @@ the right arguments in the right order for use in a function body."
          (let ((p (car pv)) (v (cdr pv)))
            (aset o p v)))
        ps))
+
+;; NB: We ignore __base__ for now, see:
+;; http://code.activestate.com/lists/python-list/334282/
+
+;;; Base classes
+
+(define-syntax-rule (make-attrs as)
+  (let ((h (make-hash-table 7)))
+    (map (lambda (pv)
+           (let ((p (car pv)) (v (cdr pv)))
+             (hashq-set! h p v)))
+         as)
+    h))
+
+(define class-type
+  (make <py3-object>
+    #:d (make-attrs '((__bases__ . (object))
+                      (__doc__ . "type(object) -> the object's type\ntype(name, bases, dict) -> a new type")
+                      (__name__ . "type")))))
+
+(define object-type
+  (make <py3-object>
+    #:d (make-attrs '((__bases__ . ())
+                      (__doc__ . "The most base object")
+                      (__name__ . "object")))))
+
+;;; Type classes
+
+(define not-implemented-type
+  #:d (make <py3-object>
+        (make-attrs '((__bases__ . (object))
+                      (__name__ . "NotImplementedType")))))
+
+(define none-type
+  #:d (make <py3-object>
+        (make-attrs '((__bases__ . (object))
+                      (__name__ . "NoneType")))))
+
+(define ellipsis-type
+  #:d (make <py3-object>
+        (make-attrs '((__bases__ . (object))
+                      (__name__ . "Ellipsis")))))
 
 ;; >>> object.__class__
 ;; <class 'type'>
@@ -143,11 +184,6 @@ the right arguments in the right order for use in a function body."
 ;; '__weakrefoffset__'    ->
 ;; 'mro']                 ->
 
-(define py3-class-type (make <py3-object>))
-
-(aset py3-class-type
-      '((__doc__ . "type(object) -> the object's type\ntype(name, bases, dict) -> a new type")))
-
 ;; >>> object().__class__
 ;; <class 'object'>
 ;; >>> dir(object().__class__)
@@ -172,65 +208,3 @@ the right arguments in the right order for use in a function body."
 ;; '__sizeof__'
 ;; '__str__'
 ;; '__subclasshook__']
-
-;; (define class-object
-;;   (create-class "object" '() (alist->vhash '((__doc__ . "The most base object")
-;;                                              (__str__ . #f)))))
-
-
-
-
-;;;
-
-;object
-
-;typ
-
-; object -> typ relationen
-
-; typklasser
-
-;; ;; Create an object
-;; (define (create-object type value id)
-;;   `(alist->vhash
-;;     ((type . ,type)
-;;      (value . ,value)
-;;      (id . 0) ;; FIXME: use gensym
-;;      ))) 
-
-;; ;; corresponds to type(name, bases, dict)
-;; (define (create-class name bases dict)
-;;   `(alist->vhash
-;;     ((name . ,name)
-;;      (bases . ,bases)
-;;      (dict . ,dict))))
-
-;;; Standard classes
-
-
-
-
-
-
-;; (define class-not-implemented
-;;   (create-class "NotImplementedType" '("object") '(__str__ . (const "NotImplemented"))))
-
-;; (define class-none
-;;   (create-class "None" '("object") '("object") '(__str__ . (const "None"))))
-
-;; (define class-ellipsis
-;;   (create-class "Ellipsis" '("object") '(;;???
-;;                                          )))
-
-;; >>> type(foo)
-;; <class 'function'>
-;; >>> dir(type(foo))
-;; ['__annotations__', '__call__', '__class__', '__closure__', '__code__',
-;; '__defaults__', '__delattr__', '__dict__', '__doc__', '__eq__',
-;; '__format__', '__ge__', '__get__', '__getattribute__', '__globals__',
-;; '__gt__', '__hash__', '__init__', '__kwdefaults__', '__le__',
-;; '__lt__', '__module__', '__name__', '__ne__', '__new__',
-;; '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__',
-;; '__str__', '__subclasshook__']
-;; 
-;; 
