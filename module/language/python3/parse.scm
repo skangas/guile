@@ -32,9 +32,11 @@
     (if (eof-object? code)
         code
         (let* ((dir (load-file-dir (resolve-module '(language python3 parse))))
-               (command (string-concatenate `("echo \"" ,code "\" "
-                                              "| " ,dir "/ast-parser.py")))
-               (port (open-pipe command OPEN_READ)))
+               (command (string-concatenate `(,dir "/ast-parser.py")))
+               (port (open-pipe command OPEN_BOTH)))
+          (display code port)
+          (newline port)
+          (newline port)
           (read port)))))
 
 
