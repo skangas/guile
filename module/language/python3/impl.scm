@@ -128,24 +128,38 @@ the right arguments in the right order for use in a function body."
 
 (define not-implemented-type
   #:d (make <py3-object>
-        (make-attrs '((__bases__ . (object))
+        (make-attrs '((__bases__ . (type))
                       (__name__ . "NotImplementedType")))))
 
 (define none-type
   (make <py3-object>
-    #:d (make-attrs '((__bases__ . (object))
+    #:d (make-attrs '((__bases__ . (type))
                       (__name__ . "NoneType")))))
 
 (define ellipsis-type
   (make <py3-object>
-    #:d (make-attrs '((__bases__ . (object))
+    #:d (make-attrs '((__bases__ . (type))
                       (__name__ . "Ellipsis")))))
+
+(define tuple-type
+  (make <py3-object>
+    #:d (make-attrs '((__bases__ . (type))
+                      (__name__ . "tuple")))))
+
+(define str-type
+  (make <py3-object>
+    #:d (make-attrs '((__bases__ . (type))
+                      (__name__ . "str")))))
+
+(define list-type
+  (make <py3-object>
+    #:d (make-attrs '((__bases__ . (type))
+                      (__name__ . "list")))))
 
 ;; >>> object.__class__
 ;; <class 'type'>
 ;; >>> dir(object.__class__)
 ;; '__abstractmethods__'  -> Unkown, not necessary to implement
-;; '__base__'             ->
 ;; '__bases__'            ->
 ;; '__basicsize__'        ->
 ;; '__call__'             -> Is called if the object is called as a method
