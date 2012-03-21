@@ -3,7 +3,6 @@ EXPECTED='()
 ### START CODE
 def f():
     return ()
-
 return f()
 ### END CODE
 
@@ -12,7 +11,6 @@ EXPECTED='(1 2 ())
 ### START CODE
 def f(a, b=2, *l):
     return (a, b, l)
-    
 return f(1)
 ### END CODE
 
@@ -21,7 +19,6 @@ EXPECTED='(1 2 (3 4))
 ### START CODE
 def f(a, b=0, *l):
     return (a, b, l)
-    
 return f(1, 2, 3, 4)
 ### END CODE
 
@@ -30,7 +27,6 @@ EXPECTED='()
 ### START CODE
 def f(*l):
     return l
-  
 f(*())
 ### END CODE
 
@@ -39,7 +35,6 @@ EXPECTED='()
 ### START CODE
 def f():
     return ()
-  
 f(*())
 ### END CODE
 
@@ -48,7 +43,6 @@ EXPECTED='()
 ### START CODE
 def f():
     return ()
-  
 f()
 ### END CODE
 
@@ -57,7 +51,6 @@ EXPECTED='(1 ())
 ### START CODE
 def f(a=1, *l):
     return (a, l)
-  
 f()
 ### END CODE
 
@@ -66,7 +59,6 @@ EXPECTED='(1 2 (3 4))
 ### START CODE
 def f(a, b=0 *l):
     return (a, b, l)
-  
 f(*(1, 2, 3, 4))
 ### END CODE
 
@@ -75,7 +67,6 @@ EXPECTED='(1 (2 3 4))
 ### START CODE
 def f(a=0, *l):
     return (a, l)
-  
 f(1, 2, *(3, 4))
 ### END CODE
 
@@ -84,16 +75,13 @@ EXPECTED='(1 2 3)
 ### START CODE
 def f(a, b, c=0):
     return (a, b, c)
-  
 f(*(1, 2, 3))
 ### END CODE
 
-NAME=Test call with few starargs to function not accepting starargs 
+NAME=Test call with few starargs to function not accepting starargs
 EXPECTED='(1 2 3)
 ### START CODE
 def f(a, b, c=0):
     return (a, b, c)
-  
 f(*(1, 2, 3))
 ### END CODE
-
