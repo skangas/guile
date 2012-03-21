@@ -77,26 +77,26 @@ the right arguments in the right order for use in a function body."
   (type #:getter py-type #:init-keyword #:t)
   (dict #:getter py-dict #:init-keyword #:d))
 
-(define-method (aget (o <py3-object>) (p <string>))
-  (aget o (string->symbol p)))
+(define-method (getattr (o <py3-object>) (p <string>))
+  (getattr o (string->symbol p)))
 
-(define-method (aget (o <py3-object>) p)
+(define-method (getattr (o <py3-object>) p)
   (let ((h (hashq-get-handle (py-dict o) p)))
     (if h
         (cdr h)
         *undefined* ;; FIXME: traverse base classes
         )))
 
-(define-method (aset (o <py3-object>) (p <string>) v)
-  (aset o (string->symbol p) v))
+(define-method (setattr (o <py3-object>) (p <string>) v)
+  (setattr o (string->symbol p) v))
 
-(define-method (aset (o <py3-object>) p v)
+(define-method (setattr (o <py3-object>) p v)
   (hashq-set! (py-dict o) p v))
 
-(define-method (aset (o <py3-object>) (ps <list>))
+(define-method (setattr (o <py3-object>) (ps <list>))
   (map (lambda (pv)
          (let ((p (car pv)) (v (cdr pv)))
-           (aset o p v)))
+           (setattr o p v)))
        ps))
 
 ;; NB: We ignore __base__ for now, see:
