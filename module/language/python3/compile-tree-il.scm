@@ -118,7 +118,7 @@ corresponding tree-il expression."
 
 (define (comp-list-or-tuple exps env)
   "Compiles a list or tuple expression into a list of values."
-  (til-list (map (lambda (x) (car (comp x env))) exps)))
+  (til-list (map (lambda (x) (comp x env)) exps)))
 
 (define (comp-block toplevel stmts env)
   "Compiles a block of statements. Updates the environment in between
