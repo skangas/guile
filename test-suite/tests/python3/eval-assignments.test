@@ -1,0 +1,56 @@
+NAME=Toplevel assign
+EXPECTED=1
+### START CODE
+a = 1
+a
+### END CODE
+
+NAME=Toplevel tuple from tuple assign
+EXPECTED=7
+### START CODE
+a,b = 3,4
+a+b
+### END CODE
+
+NAME=Toplevel tuple from list assign
+EXPECTED=7
+### START CODE
+a,b = [3,4]
+a+b
+### END CODE
+
+NAME=Toplevel list from tuple assign
+EXPECTED=5
+### START CODE
+[a,b] = 2,3
+a+b
+### END CODE
+
+NAME=Toplevel list from list assign
+EXPECTED=9
+### START CODE
+[a,b] = [5,4]
+a+b
+### END CODE
+
+NAME=Global return
+EXPECTED=2
+### START CODE
+a = 2
+def f():
+    return a
+f()
+### END CODE
+
+NAME=Global modify return
+EXPECTED='(4,3,4)
+### START CODE
+a = 3
+def f():
+    global a
+    a = a + 1
+    return a
+b = a
+c = f()
+(a,b,c)
+### END CODE
