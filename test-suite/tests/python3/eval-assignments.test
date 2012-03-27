@@ -43,7 +43,7 @@ f()
 ### END CODE
 
 NAME=Global modify return
-EXPECTED='(4,3,4)
+EXPECTED='(4 3 4)
 ### START CODE
 a = 3
 def f():
