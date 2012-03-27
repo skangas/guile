@@ -248,6 +248,25 @@ every statement."
 ;;                   (call (primitive list) (const 3) (const 4)))
 ;;   (lambda-case (((a b) #f #f () () (a b)) (lexical b b))))
 
+(define* (locals-and-globals s #:key (exclude '()))
+  "This method returns the local and global variables used in a list of
+statements. The returned value is on the form (LOCALS GLOBALS). The
+EXCLUDE keyword argument is used to exclude certain symbols from the
+returned local variables."
+  ;; TODO match while for etc
+  (let lp ((stmts s) (locals '()) (globals '()))
+    (pmatch stmts
+      (((<global> ,vars) . ,rest)
+       (lp rest locals (apply lset-adjoin eq? globals vars)))
+      (((<assign> ((<name> ,var <store>)) ,val) . ,rest)
+       (lp rest (lset-adjoin eq? locals var) globals))
+      (((<if> ,test ,body ,orelse) . ,rest)
+       (lp (append body orelse rest) locals globals))
+      ((,any . ,rest)
+       (lp rest locals globals))
+      (()
+       (list (lset-difference eq? locals (append exclude globals)) globals)))))
+
 (define (test str)
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
   (display-ln code)
