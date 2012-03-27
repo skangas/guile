@@ -23,7 +23,7 @@
 
 (define-module (language python3 commons)
   #:use-module (system base pmatch)
-  #:export (debug display-ln pzip read-python-string load-file-dir))
+  #:export (debug display-ln pzip replicate read-python-string load-file-dir))
 
 (define (debug str . rest)
   (display str) (display " ")
@@ -44,6 +44,11 @@ that it use `acons' to create a pair of the elements."
          (() (reverse! out))
          ((,b . ,rest-bs)
           (lp rest-as rest-bs (acons a b out))))))))
+
+(define (replicate num a)
+  (if (eqv? num 0)
+      '()
+      (cons a (replicate (1- num) a))))
 
 (define (read-python-string port)
   (let lp ((out '()) (c (read-char port)) (last-c #f))
