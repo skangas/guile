@@ -1,0 +1,21 @@
+NAME=Local assign
+EXPECTED='(1 2)
+### START CODE
+a = 1
+def f():
+  a = 2
+  return a
+b = f()
+(a, b)
+### END CODE
+
+NAME=Global assign
+EXPECTED='(1 1)
+### START CODE
+a = 0
+def f():
+  global a
+  a = 1
+f()
+(a, a)
+### END CODE
