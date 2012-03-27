@@ -127,8 +127,8 @@ the right arguments in the right order for use in a function body."
 ;;; Type classes
 
 (define not-implemented-type
-  #:d (make <py3-object>
-        (make-attrs '((__bases__ . (type))
+  (make <py3-object>
+    #:d (make-attrs '((__bases__ . (type))
                       (__name__ . "NotImplementedType")))))
 
 (define none-type
