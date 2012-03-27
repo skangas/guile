@@ -73,7 +73,7 @@ corresponding tree-il expression."
      env
      env)))
 
-(define (comp x e)
+(define* (comp x e #:optional toplevel)
   "Compiles a given python3 expressions in a given environment into a
 corresponding tree-il expression."
   (pmatch x
@@ -91,14 +91,24 @@ corresponding tree-il expression."
     ((<assign> ,targets ,value)
      (pmatch targets
        (((<name> ,name <store>))
-        `(define ,name ,(comp value e)))
+        (if toplevel
+            `(define ,name ,(comp value e))
+            (let ((ret (lookup name e)))
+              `(set! ,(if ret
+                          `(lexical ,name ,ret)
+                          `(toplevel ,name))
+                     ,(comp value e)))))
        (((<tuple> ,names))
         ;; tuples, lists and starred not implemented
         #f)))
+    ((<global> ,names)
+     '(void)) ;; TODO: Check if any id in names is bound by a fundef.
     (<pass>
      '(void))
     ((<expr> ,exp)
-     (comp exp e))
+     (if toplevel
+         (comp exp e)
+         `(begin ,(comp exp e) (void))))
 
     ;; expressions
     ((<bin-op> ,eleft ,op ,eright)
@@ -139,37 +149,12 @@ corresponding tree-il expression."
   (til-list (map (lambda (x) (comp x env)) exps)))
 
 (define (comp-block toplevel stmts env)
-  "Compiles a block of statements. Updates the environment in between
-every statement."
+  "Compiles a block of statements."
   (define (get-ids targets)
     (pmatch targets
       (((<name> ,id <store>))
        (list id))))
-  (let lp ((in stmts) (out '()))
-    (pmatch in
-      (((<assign> ,targets ,values) . ,rest)
-       (guard (not toplevel))
-       (let* ((argnames (get-ids targets))
-              (gensyms  (map-gensym argnames))
-              (args (comp values env))
-              (stmt
-               `(primcall call-with-values
-                 ,(@impl assign-match-arguments `(const ,targets) args)
-                 (lambda ()
-                   (lambda-case
-                    ((,argnames #f #f () () ,gensyms)
-                     ,(comp-block #f rest
-                                  (add2env env argnames gensyms))))))))
-         (lp '() (cons stmt out))))
-      (((<expr> ,exp) . ,rest)
-       (guard (not toplevel))
-       (lp rest (cons `(begin ,(comp exp env) (void)) out)))
-      ((,stmt . ,rest)
-       (lp rest (cons (comp stmt env) out)))
-      ('()
-       (if (null? out)
-           '(void)
-           `(begin ,@(reverse! out)))))))
+  `(begin ,@(map (lambda (stmt) (comp stmt env toplevel)) stmts)))
 
 ;; Handles all types of calls not involving kwargs and keyword
 ;; arguments.
@@ -184,24 +169,34 @@ every statement."
          (rest (gensym "rest$"))
          (argsym (gensym "args$"))
          ;; (kwargsym (gensym "kwargs$"))    kwargs not implemented yet
-         (gensyms (map-gensym argnames)))
+         (gensyms (map-gensym argnames))
+         (lg (locals-and-globals body #:exclude argnames))
+         (local-sym (gensym "locals$"))
+         (locals (cons local-sym (car lg)))
+         (local-syms (cons local-sym (map-gensym (cdr locals))))
+         (globals (cadr lg)))
     `(lambda-case
       ((() #f ,rest
         (#f (#:args ,argsym ,argsym)) ;; (#:kwargs ,kwargsym ,kwargsym))
         ((const #f)) (,rest ,argsym))
        (let-values
          (primcall apply (primitive values)
-                   ,(@impl fun-match-arguments
-                           `(const ,id)
-                           `(primcall list ,@argconsts)
-                           `(const ,(if stararg #t #f))
-                           (lex1 rest)
-                           (lex1 argsym)
-                           ;; (lex1 kwargsym)
-                           `(primcall list ,@inits)))
+          (primcall append
+           ,(@impl fun-match-arguments
+                   `(const ,id)
+                   `(primcall list ,@argconsts)
+                   `(const ,(if stararg #t #f))
+                   (lex1 rest)
+                   (lex1 argsym)
+                   ;; (lex1 kwargsym)
+                   `(primcall list ,@inits))
+           (primcall cons
+            ,(til-list (map (lambda (x) `(const ,x)) (cdr locals)))
+            ,(til-list (replicate (1- (length locals)) '(const #nil))))))
          (lambda-case
-          ((,argnames #f #f () () ,gensyms)
-           ,(comp-block #f body (add2env env argnames gensyms)))))))))
+          ((,(append argnames locals) #f #f () () ,(append gensyms local-syms))
+           ,(comp-block #f body (add2env env (append argnames locals)
+                                         (append gensyms local-syms))))))))))
 
 (define (comp-op op)
   (define ops '((<gt> . >) (<lt> . <) (<gt-e> . >=) (<lt-e> . <=) (<eq> . equal?)))
