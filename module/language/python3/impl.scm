@@ -161,35 +161,35 @@ the right arguments in the right order for use in a function body."
 ;; >>> dir(object.__class__)
 ;; '__abstractmethods__'  -> Unkown, not necessary to implement
 ;; '__bases__'            ->
-;; '__basicsize__'        ->
 ;; '__call__'             -> Is called if the object is called as a method
 ;; '__class__'            -> Pointer to the class object
+;; '__setattr__'          ->
 ;; '__delattr__'          -> Called when deleting a attribute using `delete foo.bar`
 ;; '__dict__'             -> A dict containing all the attributes of the object
 ;; '__dictoffset__'       -> 
-;; '__doc__'              ->
-;; '__eq__'               ->
+;; '__doc__'              -> A function/objects documentation string or None if not set
+;; '__eq__'               -> Called by the == operator
+;; '__ge__'               -> Called by the <= operator
+;; '__gt__'               -> Called by the < operator
+;; '__le__'               -> Called by the >= operator
+;; '__lt__'               -> Called by the > operator
+;; '__ne__'               -> Called by the != operator, calls __eq__ if not defined
 ;; '__flags__'            ->
-;; '__format__'           ->
-;; '__ge__'               ->
-;; '__getattribute__'     ->
-;; '__gt__'               ->
+;; '__format__'           -> Object defined function that returns a string for use by the format() function, takes two arguments __format__(self, format_spec)
+;; '__getattribute__'     -> Almost always called when accessing attributes on an object, will get called instead of __getattr__ if this is defined.
 ;; '__hash__'             ->
-;; '__init__'             ->
-;; '__instancecheck__'    ->
-;; '__itemsize__'         ->
-;; '__le__'               ->
-;; '__lt__'               ->
-;; '__module__'           ->
+;; '__init__'             -> Called on initialization of an object instance.
+;; '__instancecheck__'    -> takes two arguments (self, instance) and returns true if instance is a direct or indirect instance of the objects class.
+;; '__itemsize__'         -> How big the items in a collection is
+;; '__basicsize__'        -> Fixed size independant on number of objects
+;; '__module__'           -> The name of the module the function is defined in or None if not available.
 ;; '__mro__'              ->
 ;; '__name__'             ->
-;; '__ne__'               ->
 ;; '__new__'              ->
 ;; '__prepare__'          ->
 ;; '__reduce__'           ->
 ;; '__reduce_ex__'        ->
 ;; '__repr__'             ->
-;; '__setattr__'          ->
 ;; '__sizeof__'           ->
 ;; '__str__'              ->
 ;; '__subclasscheck__'    ->
