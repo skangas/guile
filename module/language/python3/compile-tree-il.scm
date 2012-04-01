@@ -86,6 +86,8 @@ corresponding tree-il expression."
      `(define ,id
         (lambda ()
           ,(comp-fun-body id args body e))))
+    ((<class-def> ,id ,bases ,keywords ,starargs ,kwargs ,body ,decos)
+     (comp-class-def id bases keywords starargs kwargs body decos))
     ((<return> ,exp)
      `(primcall return ,(comp exp e)))
     ((<assign> ,targets ,value)
@@ -197,6 +199,9 @@ corresponding tree-il expression."
           ((,(append argnames locals) #f #f () () ,(append gensyms local-syms))
            ,(comp-block #f body (add2env env (append argnames locals)
                                          (append gensyms local-syms))))))))))
+
+(define (comp-class-def id bases keywords starargs kwargs body decos)
+  (@impl make-python3-class `(const ,id) '(const ()) '(const ())))
 
 (define (comp-op op)
   (define ops '((<gt> . >) (<lt> . <) (<gt-e> . >=) (<lt-e> . <=) (<eq> . equal?)))
