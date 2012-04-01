@@ -28,8 +28,6 @@
   #:use-module (system base pmatch)
   #:export (compare fun-match-arguments assign-match-arguments))
 
-(define (assign-match-arguments targets vals)
-  (lambda () (values vals)))
 
 (define (fun-match-arguments id argnames has-stararg rest args inits)
   "`rest' represents all arguments passed to a method call. `args' is
