@@ -26,8 +26,7 @@
   #:use-module (oop goops)
   #:use-module (srfi srfi-1)
   #:use-module (system base pmatch)
-  #:export (compare fun-match-arguments assign-match-arguments))
-
+  #:export (compare fun-match-arguments make-python3-class setattr getattr))
 
 (define (fun-match-arguments id argnames has-stararg rest args inits)
   "`rest' represents all arguments passed to a method call. `args' is
@@ -68,22 +67,88 @@ the right arguments in the right order for use in a function body."
 
 ;;; Python object implementation
 
+(define-syntax-rule (make-attrs as)
+  (let ((h (make-hash-table 7)))
+    (map (lambda (pv)
+           (let ((p (car pv)) (v (cdr pv)))
+             (hashq-set! h p v)))
+         as)
+    h))
+
+(define* (make-python3-class name bases body
+                             #:key (keywords #f) (starargs #f)
+                                   (kwargs #f)   (decos #f))
+  "Creatas a Python 3 class called NAME. BASES is a list of base class
+instances. BODY is an alist containing symbols mapped to values. If the
+symbol used is #f just evaluate the value. Otherwise bind the value to
+the class's standard `__dict__' attribute. This function will define a
+callable python 3 class in the callers current module."
+  ;; FIXME: bases is ignored atm.
+  ;; TODO: find out what keywords etc does. Implement decos
+  (let* ((sym (gensym (string-append (symbol->string name) "$")))
+         (class-name (string->symbol (string-concatenate
+                                      `("<" ,(symbol->string sym) ">")))))
+    (eval
+     `(begin
+        (define-class ,class-name (<py3-object>)))
+     (resolve-module '(language python3 impl)))
+    (eval
+     `(begin
+        (define ,name
+          (make (@@ (language python3 impl) <py3-type>)
+            #:d ((@@ (language python3 impl) make-attrs)
+                 '((__bases__ . (,(@@ (language python3 impl) py3-object)))))))
+        (slot-set! ,name 'procedure
+                   (lambda ()
+                     (let ((obj (make (@@ (language python3 impl) ,class-name)
+                                  #:d (make-hash-table 7))))
+                       (setattr obj '__bases__ (list ,name))
+                       (slot-set! obj 'procedure
+                                  (lambda (. rest)
+                                    (apply (getattr obj '__call__) rest)))
+                       obj)))
+        (map (lambda (x)
+               (if (car x)
+                   (setattr ,name (car x) (cdr x))
+                   (cdr x)))
+             ',body)
+        (if #f #f))
+     (current-module))))
+
 (define *undefined* ((@@ (oop goops) make-unbound)))
 
-(define-class <py3-object> ()
+(define-class <py3-object> (<applicable-struct>)
   (id #:getter py-id #:init-form (gensym "pyclass$"))
   (type #:getter py-type #:init-keyword #:t)
   (dict #:getter py-dict #:init-keyword #:d))
+
+(define py3-object
+  (make <py3-object>
+    #:d (make-attrs '((__bases__ . ())))))
+
+(define-class <py3-type> (<py3-object>))
 
 (define-method (getattr (o <py3-object>) (p <string>))
   (getattr o (string->symbol p)))
 
 (define-method (getattr (o <py3-object>) p)
+  (let ((ret (lookupattr o p)))
+    (if ret
+        (cdr ret)
+        (error (string-concatenate
+                `(,(object->string o) " has no attribute "
+                  ,(symbol->string p)))))))
+
+(define-method (lookupattr (o <py3-object>) p)
   (let ((h (hashq-get-handle (py-dict o) p)))
     (if h
-        (cdr h)
-        *undefined* ;; FIXME: traverse base classes
-        )))
+        h
+        (let lp ((classes (getattr o '__bases__)))
+          (pmatch classes
+            (()
+             #f)
+            ((,c . ,rest)
+             (or (lookupattr c p) (lp rest))))))))
 
 (define-method (setattr (o <py3-object>) (p <string>) v)
   (setattr o (string->symbol p) v))
@@ -101,14 +166,6 @@ the right arguments in the right order for use in a function body."
 ;; http://code.activestate.com/lists/python-list/334282/
 
 ;;; Base classes
-
-(define-syntax-rule (make-attrs as)
-  (let ((h (make-hash-table 7)))
-    (map (lambda (pv)
-           (let ((p (car pv)) (v (cdr pv)))
-             (hashq-set! h p v)))
-         as)
-    h))
 
 (define class-type
   (make <py3-object>
