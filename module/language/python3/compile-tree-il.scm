@@ -83,26 +83,13 @@ corresponding tree-il expression."
 
     ;; stmt code
     ((<function-def> ,id ,args ,body ,decos ,ret)
-     `(define ,id
-        (lambda ()
-          ,(comp-fun-body id args body e))))
+     (do-assign id (comp-fun-body id args body e) e toplevel))
     ((<class-def> ,id ,bases ,keywords ,starargs ,kwargs ,body ,decos)
      (comp-class-def id bases keywords starargs kwargs body decos))
     ((<return> ,exp)
      `(primcall return ,(comp exp e)))
     ((<assign> ,targets ,value)
-     (pmatch targets
-       (((<name> ,name <store>))
-        (if toplevel
-            `(define ,name ,(comp value e))
-            (let ((ret (lookup name e)))
-              `(set! ,(if ret
-                          `(lexical ,name ,ret)
-                          `(toplevel ,name))
-                     ,(comp value e)))))
-       (((<tuple> ,names))
-        ;; tuples, lists and starred not implemented
-        #f)))
+     (do-assign targets (comp value e) e toplevel))
     ((<global> ,names)
      '(void)) ;; TODO: Check if any id in names is bound by a fundef.
     (<pass>
@@ -177,28 +164,29 @@ corresponding tree-il expression."
          (locals (cons local-sym (car lg)))
          (local-syms (cons local-sym (map-gensym (cdr locals))))
          (globals (cadr lg)))
-    `(lambda-case
-      ((() #f ,rest
-        (#f (#:args ,argsym ,argsym)) ;; (#:kwargs ,kwargsym ,kwargsym))
-        ((const #f)) (,rest ,argsym))
-       (let-values
-         (primcall apply (primitive values)
-          (primcall append
-           ,(@impl fun-match-arguments
-                   `(const ,id)
-                   `(primcall list ,@argconsts)
-                   `(const ,(if stararg #t #f))
-                   (lex1 rest)
-                   (lex1 argsym)
-                   ;; (lex1 kwargsym)
-                   `(primcall list ,@inits))
-           (primcall cons
-            ,(til-list (map (lambda (x) `(const ,x)) (cdr locals)))
-            ,(til-list (replicate (1- (length locals)) '(const #nil))))))
-         (lambda-case
-          ((,(append argnames locals) #f #f () () ,(append gensyms local-syms))
-           ,(comp-block #f body (add2env env (append argnames locals)
-                                         (append gensyms local-syms))))))))))
+    `(lambda ()
+       (lambda-case
+        ((() #f ,rest
+          (#f (#:args ,argsym ,argsym)) ;; (#:kwargs ,kwargsym ,kwargsym))
+          ((const #f)) (,rest ,argsym))
+         (let-values
+             (primcall apply (primitive values)
+                       (primcall append
+                                 ,(@impl fun-match-arguments
+                                         `(const ,id)
+                                         `(primcall list ,@argconsts)
+                                         `(const ,(if stararg #t #f))
+                                         (lex1 rest)
+                                         (lex1 argsym)
+                                         ;; (lex1 kwargsym)
+                                         `(primcall list ,@inits))
+                                 (primcall cons
+                                           ,(til-list (map (lambda (x) `(const ,x)) (cdr locals)))
+                                           ,(til-list (replicate (1- (length locals)) '(const #nil))))))
+           (lambda-case
+            ((,(append argnames locals) #f #f () () ,(append gensyms local-syms))
+             ,(comp-block #f body (add2env env (append argnames locals)
+                                           (append gensyms local-syms)))))))))))
 
 (define (comp-class-def id bases keywords starargs kwargs body decos)
   (@impl make-python3-class `(const ,id) '(const ()) '(const ())))
@@ -247,6 +235,22 @@ corresponding tree-il expression."
 ;;                   (primitive values)
 ;;                   (call (primitive list) (const 3) (const 4)))
 ;;   (lambda-case (((a b) #f #f () () (a b)) (lexical b b))))
+
+(define* (do-assign targets val env toplevel)
+  ;; TODO: Match lists etc as targets. VAL should then be an iterable.
+  (define (doit id val)
+    (if toplevel
+        `(define ,id ,val)
+        (let ((sym (lookup id env)))
+          `(set! ,(if sym `(lexical ,id ,sym) `(toplevel ,id)) ,val))))
+  (pmatch targets
+    (,id
+     (guard (symbol? id))
+     (doit id val))
+    (((<name> ,id <store>))
+     (doit id val))
+    (,any
+     (error (string-append "Not matched: " (object->string any))))))
 
 (define* (locals-and-globals s #:key (exclude '()))
   "This method returns the local and global variables used in a list of
