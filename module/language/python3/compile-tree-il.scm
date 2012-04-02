@@ -262,6 +262,8 @@ returned local variables."
        (lp rest (lset-adjoin eq? locals var) globals))
       (((<if> ,test ,body ,orelse) . ,rest)
        (lp (append body orelse rest) locals globals))
+      (((<function-def> ,id ,args ,body ,decos ,ret) . ,rest)
+       (lp rest (lset-adjoin eq? locals id) globals))
       ((,any . ,rest)
        (lp rest locals globals))
       (()
