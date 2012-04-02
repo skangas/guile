@@ -105,7 +105,7 @@ callable python 3 class in the callers current module."
                        (setattr obj '__bases__ (list ,name))
                        (slot-set! obj 'procedure
                                   (lambda (. rest)
-                                    (apply (getattr obj '__call__) rest)))
+                                    (apply (getattr ,name '__call__) rest)))
                        obj)))
         (map (lambda (x)
                (if (car x)
