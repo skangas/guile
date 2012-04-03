@@ -86,7 +86,9 @@ corresponding tree-il expression."
     ((<function-def> ,id ,args ,body ,decos ,ret)
      (do-assign id (comp-fun-body id args body e) e toplevel))
     ((<class-def> ,id ,bases ,keywords ,starargs ,kwargs ,body ,decos)
-     (comp-class-def id bases keywords starargs kwargs body decos e))
+     (do-assign id
+                (comp-class-def id bases keywords starargs kwargs body decos e)
+                e toplevel))
     ((<return> ,exp)
      `(primcall return ,(comp exp e)))
     ((<assign> ,targets ,value)
@@ -209,8 +211,11 @@ corresponding tree-il expression."
             (lp rest (cons `(primcall cons (const ,id)
                                       ,(comp-fun-body id args body env)) out)))
            ((<class-def> ,id ,bases ,keywords ,starargs ,kwargs ,body ,decos)
-            ;; TODO: handle classes inside classes
-            (error "TODO"))
+            ;; FIXME: probably need to update the environment
+            (lp rest (cons `(primcall cons (const ,id)
+                                      ,(comp-class-def id bases keywords starargs
+                                                       kwargs body decos env))
+                           out)))
            (,any
             (lp rest (cons `(primcall cons (const #f) ,(comp any env)) out)))))))))
 

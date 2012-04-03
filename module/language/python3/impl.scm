@@ -81,8 +81,8 @@ the right arguments in the right order for use in a function body."
   "Creatas a Python 3 class called NAME. BASES is a list of base class
 instances. BODY is an alist containing symbols mapped to values. If the
 symbol used is #f just evaluate the value. Otherwise bind the value to
-the class's standard `__dict__' attribute. This function will define a
-callable python 3 class in the callers current module."
+the class's standard `__dict__' attribute. This function returns a
+callable python 3 class."
   ;; FIXME: bases is ignored atm.
   ;; TODO: find out what keywords etc does. Implement decos
   (let* ((sym (gensym (string-append (symbol->string name) "$")))
@@ -92,28 +92,27 @@ callable python 3 class in the callers current module."
      `(begin
         (define-class ,class-name (<py3-object>)))
      (resolve-module '(language python3 impl)))
-    (eval
-     `(begin
-        (define ,name
-          (make (@@ (language python3 impl) <py3-type>)
-            #:d ((@@ (language python3 impl) make-attrs)
-                 '((__bases__ . (,(@@ (language python3 impl) py3-object)))))))
-        (slot-set! ,name 'procedure
-                   (lambda ()
-                     (let ((obj (make (@@ (language python3 impl) ,class-name)
-                                  #:d (make-hash-table 7))))
-                       (setattr obj '__bases__ (list ,name))
-                       (slot-set! obj 'procedure
-                                  (lambda (. rest)
-                                    (apply (getattr ,name '__call__) rest)))
-                       obj)))
-        (map (lambda (x)
-               (if (car x)
-                   (setattr ,name (car x) (cdr x))
-                   (cdr x)))
-             ',body)
-        (if #f #f))
-     (current-module))))
+    (let ((class
+           (make (@@ (language python3 impl) <py3-type>)
+             #:d ((@@ (language python3 impl) make-attrs)
+                  `((__bases__ . (,(@@ (language python3 impl) py3-object))))))))
+      (slot-set! class 'procedure
+                 (lambda ()
+                   (let ((obj (make (module-ref (resolve-module
+                                                 '(language python3 impl))
+                                                class-name)
+                                #:d (make-hash-table 7))))
+                     (setattr obj '__bases__ (list class))
+                     (slot-set! obj 'procedure
+                                (lambda (. rest)
+                                  (apply (getattr class '__call__) rest)))
+                     obj)))
+      (map (lambda (x)
+             (if (car x)
+                 (setattr class (car x) (cdr x))
+                 (cdr x)))
+           body)
+      class)))
 
 (define *undefined* ((@@ (oop goops) make-unbound)))
 
@@ -221,7 +220,7 @@ callable python 3 class in the callers current module."
 ;; '__setattr__'          ->
 ;; '__delattr__'          -> Called when deleting a attribute using `delete foo.bar`
 ;; '__dict__'             -> A dict containing all the attributes of the object
-;; '__dictoffset__'       -> 
+;; '__dictoffset__'       ->
 ;; '__doc__'              -> A function/objects documentation string or None if not set
 ;; '__eq__'               -> Called by the == operator
 ;; '__ge__'               -> Called by the <= operator
