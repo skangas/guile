@@ -86,7 +86,7 @@ corresponding tree-il expression."
     ((<function-def> ,id ,args ,body ,decos ,ret)
      (do-assign id (comp-fun-body id args body e) e toplevel))
     ((<class-def> ,id ,bases ,keywords ,starargs ,kwargs ,body ,decos)
-     (comp-class-def id bases keywords starargs kwargs body decos))
+     (comp-class-def id bases keywords starargs kwargs body decos e))
     ((<return> ,exp)
      `(primcall return ,(comp exp e)))
     ((<assign> ,targets ,value)
@@ -191,8 +191,28 @@ corresponding tree-il expression."
              ,(comp-block #f body (add2env env (append argnames locals)
                                            (append gensyms local-syms)))))))))))
 
-(define (comp-class-def id bases keywords starargs kwargs body decos)
-  (@impl make-python3-class `(const ,id) '(const ()) '(const ())))
+(define (comp-class-def id bases keywords starargs kwargs body decos env)
+  (let ((bases '(const ())))
+    (let lp ((stmts body) (out '()))
+      (pmatch stmts
+        (()
+         (@impl make-python3-class `(const ,id) bases (til-list (reverse! out))))
+        ((,stmt . ,rest)
+         (pmatch stmt
+           ((<assign> ,targets ,value)
+            (let ((ids (get-targets targets)))
+              (if (null? (cdr ids))
+                  (lp rest (cons `(primcall cons (const ,(car ids))
+                                            ,(comp value env)) out))
+                  (error "not implemented"))))
+           ((<function-def> ,id ,args ,body ,decos ,ret)
+            (lp rest (cons `(primcall cons (const ,id)
+                                      ,(comp-fun-body id args body env)) out)))
+           ((<class-def> ,id ,bases ,keywords ,starargs ,kwargs ,body ,decos)
+            ;; TODO: handle classes inside classes
+            (error "TODO"))
+           (,any
+            (lp rest (cons `(primcall cons (const #f) ,(comp any env)) out)))))))))
 
 (define (comp-op op)
   (define ops '((<gt> . >) (<lt> . <) (<gt-e> . >=) (<lt-e> . <=) (<eq> . equal?)))
