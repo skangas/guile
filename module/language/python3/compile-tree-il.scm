@@ -236,19 +236,24 @@ corresponding tree-il expression."
 ;;                   (call (primitive list) (const 3) (const 4)))
 ;;   (lambda-case (((a b) #f #f () () (a b)) (lexical b b))))
 
-(define* (do-assign targets val env toplevel)
+(define (do-assign targets val env toplevel)
   ;; TODO: Match lists etc as targets. VAL should then be an iterable.
   (define (doit id val)
     (if toplevel
         `(define ,id ,val)
         (let ((sym (lookup id env)))
           `(set! ,(if sym `(lexical ,id ,sym) `(toplevel ,id)) ,val))))
+  (let ((ids (get-targets targets)))
+    (if (null? (cdr ids))
+        (doit (car ids) val))))
+
+(define (get-targets targets)
   (pmatch targets
     (,id
      (guard (symbol? id))
-     (doit id val))
+     (list id))
     (((<name> ,id <store>))
-     (doit id val))
+     (list id))
     (,any
      (error (string-append "Not matched: " (object->string any))))))
 
