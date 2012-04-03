@@ -122,6 +122,8 @@ corresponding tree-il expression."
        `(call ,c-fun ,@c-args)))
     ((<num> ,n)
      `(const ,n))
+    ((<attribute> ,exp ,attr ,ctx)
+     (@impl getattr (comp exp e) `(const ,attr)))
     ((<name> ,name ,ctx)
      (let ((ret (lookup name e)))
        (if ret
