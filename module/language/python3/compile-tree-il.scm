@@ -25,6 +25,7 @@
   #:use-module (language python3 commons)
   #:use-module (language python3 impl)
   #:use-module (language tree-il)
+  #:use-module (oop goops)
   #:use-module (system base pmatch)
   #:use-module (srfi srfi-1)
   #:export (compile-tree-il test))
