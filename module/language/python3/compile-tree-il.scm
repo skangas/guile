@@ -93,6 +93,8 @@ corresponding tree-il expression."
      `(primcall return ,(comp exp e)))
     ((<assign> ,targets ,value)
      (do-assign targets (comp value e) e toplevel))
+    ((<aug-assign> ,target ,op ,value)
+     (comp `(<assign> (,target) (<bin-op> ,target ,op ,value))  e toplevel))
     ((<global> ,names)
      '(void)) ;; TODO: Check if any id in names is bound by a fundef.
     (<pass>
