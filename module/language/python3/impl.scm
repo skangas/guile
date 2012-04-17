@@ -116,10 +116,20 @@ callable python 3 class."
 
 (define *undefined* ((@@ (oop goops) make-unbound)))
 
+(define-class <py3-meta-class> (<class>))
+
+(define-method (slot-missing (class <py3-meta-class>) instance slot-name)
+  (getattr instance slot-name))
+
+(define-method (slot-missing (class <py3-meta-class>) instance slot-name value)
+  (setattr instance slot-name value)
+  (values))
+
 (define-class <py3-object> (<applicable-struct>)
   (id #:getter py-id #:init-form (gensym "pyclass$"))
   (type #:getter py-type #:init-keyword #:t)
-  (dict #:getter py-dict #:init-keyword #:d))
+  (dict #:getter py-dict #:init-keyword #:d)
+  #:metaclass <py3-meta-class>)
 
 (define py3-object
   (make <py3-object>
