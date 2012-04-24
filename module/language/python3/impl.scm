@@ -33,6 +33,8 @@
    (if (defined? var) (module-remove! (current-module) var)))
  '(<py3-meta-class> <py3-instance>))
 
+(define *secret-undef-value* (make-symbol "undef"))
+
 (define (fun-match-arguments id argnames has-stararg rest args inits)
   "`rest' represents all arguments passed to a method call. `args' is
 the values passed to the `args' keyword argument. This method returns
