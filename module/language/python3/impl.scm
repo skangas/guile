@@ -57,7 +57,7 @@ the right arguments in the right order for use in a function body."
               (err-len)
               (call-with-values
                   (lambda () (split-at first arg-len))
-                (lambda (a b) `(,@a ,b))))))))
+                (lambda (a b) (if has-stararg `(,@a ,b) a))))))))
 
 (define (compare os vs)
   (let lp ((ops os) (vals vs))
