@@ -150,7 +150,9 @@ corresponding tree-il expression."
     (pmatch targets
       (((<name> ,id <store>))
        (list id))))
-  `(begin ,@(map (lambda (stmt) (comp stmt env toplevel)) stmts)))
+  (if (null? stmts)
+      '(void)
+      `(begin ,@(map (lambda (stmt) (comp stmt env toplevel)) stmts))))
 
 ;; Handles all types of calls not involving kwargs and keyword
 ;; arguments.
