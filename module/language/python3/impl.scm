@@ -31,7 +31,7 @@
 (for-each
  (lambda (var)
    (if (defined? var) (module-remove! (current-module) var)))
- '(<py3-meta-class> <py3-instance>>))
+ '(<py3-meta-class> <py3-instance>))
 
 (define (fun-match-arguments id argnames has-stararg rest args inits)
   "`rest' represents all arguments passed to a method call. `args' is
