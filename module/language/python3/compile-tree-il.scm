@@ -312,5 +312,6 @@ returned local variables."
 
 (define (test str)
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
-  (display-ln code)
-  (compile-tree-il code '() '())))
+    (display-ln code)
+    (let ((tree-il (compile-tree-il code '() '())))
+      (unparse-tree-il tree-il))))
