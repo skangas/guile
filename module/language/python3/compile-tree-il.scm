@@ -129,10 +129,18 @@ corresponding tree-il expression."
     ((<attribute> ,exp ,attr ,ctx)
      (@impl getattr (comp exp e) `(const ,attr)))
     ((<name> ,name ,ctx)
-     (let ((ret (lookup name e)))
-       (if ret
-           `(lexical ,name ,ret)
-           (-> (toplevel name)))))
+     (or (lookup name *keywords*)
+         (let ((ret (lookup name e)))
+           (if ret
+               ;; TODO: only do check if `name' is a local variable
+               `(if (primcall eq? (lexical ,name ,ret)
+                              (@@ (language python3 impl) *secret-undef-value*))
+                    ,(unparse-tree-il
+                      (macroexpand `(error (string-concatenate
+                                            '("local variable '" ,(symbol->string name)
+                                              "' referenced before assignment.")))))
+                    (lexical ,name ,ret))
+               (-> (toplevel name))))))
     ((<tuple> ,exps ,ctx)
      (comp-list-or-tuple exps e))
     ((<list> ,exps ,ctx)
@@ -180,18 +188,19 @@ corresponding tree-il expression."
           ((const #f)) (,rest ,argsym))
          (let-values
              (primcall apply (primitive values)
-                       (primcall append
-                                 ,(@impl fun-match-arguments
-                                         `(const ,id)
-                                         `(primcall list ,@argconsts)
-                                         `(const ,(if stararg #t #f))
-                                         (lex1 rest)
-                                         (lex1 argsym)
-                                         ;; (lex1 kwargsym)
-                                         `(primcall list ,@inits))
-                                 (primcall cons
-                                           ,(til-list (map (lambda (x) `(const ,x)) (cdr locals)))
-                                           ,(til-list (replicate (1- (length locals)) '(const #nil))))))
+               (primcall append
+                 ,(@impl fun-match-arguments
+                         `(const ,id)
+                         `(primcall list ,@argconsts)
+                         `(const ,(if stararg #t #f))
+                         (lex1 rest)
+                         (lex1 argsym)
+                         ;; (lex1 kwargsym)
+                         `(primcall list ,@inits))
+                 (primcall cons
+                           ,(til-list (map (lambda (x) `(const ,x)) (cdr locals)))
+                           ,(til-list (replicate (1- (length locals))
+                                                 '(@@ (language python3 impl) *secret-undef-value*))))))
            (lambda-case
             ((,(append argnames locals) #f #f () () ,(append gensyms local-syms))
              ,(comp-block #f body (add2env env (append argnames locals)
@@ -309,6 +318,8 @@ returned local variables."
        (lp rest locals globals))
       (()
        (list (lset-difference eq? locals (append exclude globals)) globals)))))
+
+(define *keywords* `((True . (const #t)) (False . (const #f))))
 
 (define (test str)
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
