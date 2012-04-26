@@ -29,81 +29,13 @@
 (use-modules (ice-9 pretty-print)
              (srfi srfi-1))
 
-
-(define *python-ex2* (string-copy "
-
-month_names = ['Januari', 'Februari', 'Maart',      # These are the
-               'April',   'Mei',      'Juni',       # Dutch names
-               'Juli',    'Augustus', 'September',  # for the months
-               'Oktober', 'November', 'December']   # of the year
-
-def triple_quotes():
-   \"\"\"
-   testing a docstring
-   \"\"\"
-
-   print ''' testing another triple quote '''
-
-   print '''
-and
-now
-for
-multiline'''
-
-"))
-
-(define *python-ex* (string-copy "
-
-if len(sys.argv) == 1:
-    print 'Usage: celsius temp1 temp2 ...'
-    sys.exit(0)
-
-# Loop over the arguments
-for i in sys.argv[1:]:
-    try: 
-\tfahrenheit=float(string.atoi(i))
-    except string.atoi_error:
- \tprint(repr(i), \"not a # numeric value\")
-    else: #test
-        celsius=(fahrenheit-32)*5.0/9.0
-        print('%i\\260F = %i\\260C' % (int(fahrenheit), \\
- int(celsius+.5)))
-
-month_names = ['Januari', 'Februari', 'Maart',      # These are the
-               'April',   'Mei',      'Juni',       # Dutch names
-               'Juli',    'Augustus', 'September',  # for the months
-               'Oktober', 'November', 'December']   # of the year
-
-def triple_quotes():
-   \"\"\"
-   testing a docstring
-   \"\"\"
-
-   print ''' testing another triple quote '''
-
-   print '''
-and
-now
-for
-multiline'''
-
-"))
-
-(define *py-ind* "
-if foo:
-    if bar:
-        x = 42
-else:
-   print foo
-")
-
 ;;; Python reads program text as Unicode code points
 ;; TODO Proper Unicode Support
 
 ;;; 2.1.4. Encoding declarations
 ;; TODO
 
-;; String helper functions
+;;; String utility functions
 
 (define (string-insert str pos new)
   (string-append (substring str 0 pos)
@@ -118,18 +50,8 @@ else:
   (string-append (substring str 0 from)
                  (substring str to (string-length str))))
 
-(define (test-string-insert)
-  (define test "abcd")
-  (and (string=? (string-insert test 2 "XX") "abXXcd")))
-
-(define (test-string-delete)
-  (define test "0123456789")
-  (and (string=? (string-delete test 4 7) "0123789")))
-
-;; Various tokens
-(define <indent>  "#<INDENT>")
-(define <dedent>  "#<DEDENT>")
-(define <newline> "#<NEWLINE>")
+(define (string-first-non-space str pos)
+  (or (string-skip str #\space pos) pos))
 
 ;; Find first occurrence of char in str that is not escaped by a \
 (define (find-unescaped str char pos)
@@ -150,6 +72,11 @@ else:
              (let ((next-pos (find-unescaped str m-ch (+ 1 m-pos))))
                (and next-pos
                     (find-unquoted str char (+ 1 next-pos))))))))
+
+;; Token strings
+(define <indent>  "#<INDENT>")
+(define <dedent>  "#<DEDENT>")
+(define <newline> "#<NEWLINE>")
 
 ;; Remove all comments ;; FIXME: disallow comments after \
 
@@ -172,9 +99,6 @@ else:
 ;; that the total number of characters up to and including the replacement is a
 ;; multiple of eight (this is intended to be the same rule as used by Unix)."
 
-(define (string-first-non-space str pos)
-  (or (string-skip str #\space pos) pos))
-
 ;; Count whitespace from pos, replace any tabs encountered s.t. we have multiple
 ;; of 8, stop when we are at a character that is neither space nor tab.
 (define (fix-tabs str)
@@ -194,29 +118,6 @@ else:
       (if eol
           (fixer fixed (+ 1 eol))
           fixed))))
-
-(define (test-fix-tabs)
-  (define input "
-if foo:
-    if bar:
-\tx = 42
- \ty = 24
- \t z = 11
-else:
-   print foo
-")
-  (define correct "
-if foo:
-    if bar:
-        x = 42
-        y = 24
-         z = 11
-else:
-   print foo
-")
-  (let ((got (fix-tabs input)))
-    (pretty-print got)
-    (string=? got correct)))
 
 ;; Functions to skip blank lines
 
@@ -356,8 +257,6 @@ else:
             '(#\' #\"))
   str)
 
-(define (add-indent-tokens str) str)
-
 (define (preprocessor str)
   (add-indent-tokens
    (fix-tabs
@@ -369,3 +268,103 @@ else:
 ;; TODO: Handle: code with ;
 ;; TODO: Handle: if (true): pass
 ;; TODO: Handle: if (true): pass ; true
+
+;;; Tests
+
+(define (test-string-insert)
+  (define test "abcd")
+  (and (string=? (string-insert test 2 "XX") "abXXcd")))
+
+(define (test-string-delete)
+  (define test "0123456789")
+  (and (string=? (string-delete test 4 7) "0123789")))
+
+(define *py-ind* "
+if foo:
+    if bar:
+        x = 42
+else:
+   print foo
+")
+
+(define *python-ex* (string-copy "
+
+if len(sys.argv) == 1:
+    print 'Usage: celsius temp1 temp2 ...'
+    sys.exit(0)
+
+# Loop over the arguments
+for i in sys.argv[1:]:
+    try: 
+\tfahrenheit=float(string.atoi(i))
+    except string.atoi_error:
+ \tprint(repr(i), \"not a # numeric value\")
+    else: #test
+        celsius=(fahrenheit-32)*5.0/9.0
+        print('%i\\260F = %i\\260C' % (int(fahrenheit), \\
+ int(celsius+.5)))
+
+month_names = ['Januari', 'Februari', 'Maart',      # These are the
+               'April',   'Mei',      'Juni',       # Dutch names
+               'Juli',    'Augustus', 'September',  # for the months
+               'Oktober', 'November', 'December']   # of the year
+
+def triple_quotes():
+   \"\"\"
+   testing a docstring
+   \"\"\"
+
+   print ''' testing another triple quote '''
+
+   print '''
+and
+now
+for
+multiline'''
+
+"))
+
+(define *python-ex2* (string-copy "
+
+month_names = ['Januari', 'Februari', 'Maart',      # These are the
+               'April',   'Mei',      'Juni',       # Dutch names
+               'Juli',    'Augustus', 'September',  # for the months
+               'Oktober', 'November', 'December']   # of the year
+
+def triple_quotes():
+   \"\"\"
+   testing a docstring
+   \"\"\"
+
+   print ''' testing another triple quote '''
+
+   print '''
+and
+now
+for
+multiline'''
+
+"))
+
+(define (test-fix-tabs)
+  (define input "
+if foo:
+    if bar:
+\tx = 42
+ \ty = 24
+ \t z = 11
+else:
+   print foo
+")
+  (define correct "
+if foo:
+    if bar:
+        x = 42
+        y = 24
+         z = 11
+else:
+   print foo
+")
+  (let ((got (fix-tabs input)))
+    (pretty-print got)
+    (string=? got correct)))
