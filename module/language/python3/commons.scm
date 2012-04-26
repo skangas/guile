@@ -25,10 +25,16 @@
   #:use-module (system base pmatch)
   #:export (debug display-ln pzip replicate read-python-string load-file-dir))
 
-(define (debug str . rest)
-  (display str) (display " ")
-  (map (lambda (x) (display x) (display ", ")) rest)
-  (newline))
+(define-syntax-rule (debug str rest ...)
+  (let* ((csl (current-source-location))
+         (file (cdaddr csl))
+         (line (cdar csl)))
+    (display "DEBUG: ")
+    (if file
+        (map display (list file " line:" line " ")))
+    (display str) (display " ")
+    (map (lambda (x) (display x) (display ", ")) (list rest ...))
+    (newline)))
 
 (define (display-ln obj)
   (display obj) (newline))

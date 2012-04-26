@@ -25,6 +25,7 @@
   #:use-module (language python3 commons)
   #:use-module (language python3 impl)
   #:use-module (language tree-il)
+  #:use-module (oop goops)
   #:use-module (system base pmatch)
   #:use-module (srfi srfi-1)
   #:export (compile-tree-il test))
@@ -83,24 +84,17 @@ corresponding tree-il expression."
 
     ;; stmt code
     ((<function-def> ,id ,args ,body ,decos ,ret)
-     `(define ,id
-        (lambda ()
-          ,(comp-fun-body id args body e))))
+     (do-assign id (comp-fun-body id args body e) e toplevel))
+    ((<class-def> ,id ,bases ,keywords ,starargs ,kwargs ,body ,decos)
+     (do-assign id
+                (comp-class-def id bases keywords starargs kwargs body decos e)
+                e toplevel))
     ((<return> ,exp)
      `(primcall return ,(comp exp e)))
     ((<assign> ,targets ,value)
-     (pmatch targets
-       (((<name> ,name <store>))
-        (if toplevel
-            `(define ,name ,(comp value e))
-            (let ((ret (lookup name e)))
-              `(set! ,(if ret
-                          `(lexical ,name ,ret)
-                          `(toplevel ,name))
-                     ,(comp value e)))))
-       (((<tuple> ,names))
-        ;; tuples, lists and starred not implemented
-        #f)))
+     (do-assign targets (comp value e) e toplevel))
+    ((<aug-assign> ,target ,op ,value)
+     (comp `(<assign> (,target) (<bin-op> ,target ,op ,value))  e toplevel))
     ((<global> ,names)
      '(void)) ;; TODO: Check if any id in names is bound by a fundef.
     (<pass>
@@ -132,11 +126,21 @@ corresponding tree-il expression."
        `(call ,c-fun ,@c-args)))
     ((<num> ,n)
      `(const ,n))
+    ((<attribute> ,exp ,attr ,ctx)
+     (@impl getattr (comp exp e) `(const ,attr)))
     ((<name> ,name ,ctx)
-     (let ((ret (lookup name e)))
-       (if ret
-           `(lexical ,name ,ret)
-           (-> (toplevel name)))))
+     (or (lookup name *keywords*)
+         (let ((ret (lookup name e)))
+           (if ret
+               ;; TODO: only do check if `name' is a local variable
+               `(if (primcall eq? (lexical ,name ,ret)
+                              (@@ (language python3 impl) *secret-undef-value*))
+                    ,(unparse-tree-il
+                      (macroexpand `(error (string-concatenate
+                                            '("local variable '" ,(symbol->string name)
+                                              "' referenced before assignment.")))))
+                    (lexical ,name ,ret))
+               (-> (toplevel name))))))
     ((<tuple> ,exps ,ctx)
      (comp-list-or-tuple exps e))
     ((<list> ,exps ,ctx)
@@ -154,7 +158,9 @@ corresponding tree-il expression."
     (pmatch targets
       (((<name> ,id <store>))
        (list id))))
-  `(begin ,@(map (lambda (stmt) (comp stmt env toplevel)) stmts)))
+  (if (null? stmts)
+      '(void)
+      `(begin ,@(map (lambda (stmt) (comp stmt env toplevel)) stmts))))
 
 ;; Handles all types of calls not involving kwargs and keyword
 ;; arguments.
@@ -175,28 +181,56 @@ corresponding tree-il expression."
          (locals (cons local-sym (car lg)))
          (local-syms (cons local-sym (map-gensym (cdr locals))))
          (globals (cadr lg)))
-    `(lambda-case
-      ((() #f ,rest
-        (#f (#:args ,argsym ,argsym)) ;; (#:kwargs ,kwargsym ,kwargsym))
-        ((const #f)) (,rest ,argsym))
-       (let-values
-         (primcall apply (primitive values)
-          (primcall append
-           ,(@impl fun-match-arguments
-                   `(const ,id)
-                   `(primcall list ,@argconsts)
-                   `(const ,(if stararg #t #f))
-                   (lex1 rest)
-                   (lex1 argsym)
-                   ;; (lex1 kwargsym)
-                   `(primcall list ,@inits))
-           (primcall cons
-            ,(til-list (map (lambda (x) `(const ,x)) (cdr locals)))
-            ,(til-list (replicate (1- (length locals)) '(const #nil))))))
-         (lambda-case
-          ((,(append argnames locals) #f #f () () ,(append gensyms local-syms))
-           ,(comp-block #f body (add2env env (append argnames locals)
-                                         (append gensyms local-syms))))))))))
+    `(lambda ()
+       (lambda-case
+        ((() #f ,rest
+          (#f (#:args ,argsym ,argsym)) ;; (#:kwargs ,kwargsym ,kwargsym))
+          ((const #f)) (,rest ,argsym))
+         (let-values
+             (primcall apply (primitive values)
+               (primcall append
+                 ,(@impl fun-match-arguments
+                         `(const ,id)
+                         `(primcall list ,@argconsts)
+                         `(const ,(if stararg #t #f))
+                         (lex1 rest)
+                         (lex1 argsym)
+                         ;; (lex1 kwargsym)
+                         `(primcall list ,@inits))
+                 (primcall cons
+                           ,(til-list (map (lambda (x) `(const ,x)) (cdr locals)))
+                           ,(til-list (replicate (1- (length locals))
+                                                 '(@@ (language python3 impl) *secret-undef-value*))))))
+           (lambda-case
+            ((,(append argnames locals) #f #f () () ,(append gensyms local-syms))
+             ,(comp-block #f body (add2env env (append argnames locals)
+                                           (append gensyms local-syms)))))))))))
+
+(define (comp-class-def id bases keywords starargs kwargs body decos env)
+  (let ((bases '(const ())))
+    (let lp ((stmts body) (out '()))
+      (pmatch stmts
+        (()
+         (@impl make-python3-class `(const ,id) bases (til-list (reverse! out))))
+        ((,stmt . ,rest)
+         (pmatch stmt
+           ((<assign> ,targets ,value)
+            (let ((ids (get-targets targets)))
+              (if (null? (cdr ids))
+                  (lp rest (cons `(primcall cons (const ,(car ids))
+                                            ,(comp value env)) out))
+                  (error "not implemented"))))
+           ((<function-def> ,id ,args ,body ,decos ,ret)
+            (lp rest (cons `(primcall cons (const ,id)
+                                      ,(comp-fun-body id args body env)) out)))
+           ((<class-def> ,id ,bases ,keywords ,starargs ,kwargs ,body ,decos)
+            ;; FIXME: probably need to update the environment
+            (lp rest (cons `(primcall cons (const ,id)
+                                      ,(comp-class-def id bases keywords starargs
+                                                       kwargs body decos env))
+                           out)))
+           (,any
+            (lp rest (cons `(primcall cons (const #f) ,(comp any env)) out)))))))))
 
 (define (comp-op op)
   (define ops '((<gt> . >) (<lt> . <) (<gt-e> . >=) (<lt-e> . <=) (<eq> . equal?)))
@@ -243,6 +277,27 @@ corresponding tree-il expression."
 ;;                   (call (primitive list) (const 3) (const 4)))
 ;;   (lambda-case (((a b) #f #f () () (a b)) (lexical b b))))
 
+(define (do-assign targets val env toplevel)
+  ;; TODO: Match lists etc as targets. VAL should then be an iterable.
+  (define (doit id val)
+    (if toplevel
+        `(define ,id ,val)
+        (let ((sym (lookup id env)))
+          `(set! ,(if sym `(lexical ,id ,sym) `(toplevel ,id)) ,val))))
+  (let ((ids (get-targets targets)))
+    (if (null? (cdr ids))
+        (doit (car ids) val))))
+
+(define (get-targets targets)
+  (pmatch targets
+    (,id
+     (guard (symbol? id))
+     (list id))
+    (((<name> ,id <store>))
+     (list id))
+    (,any
+     (error (string-append "Not matched: " (object->string any))))))
+
 (define* (locals-and-globals s #:key (exclude '()))
   "This method returns the local and global variables used in a list of
 statements. The returned value is on the form (LOCALS GLOBALS). The
@@ -257,12 +312,17 @@ returned local variables."
        (lp rest (lset-adjoin eq? locals var) globals))
       (((<if> ,test ,body ,orelse) . ,rest)
        (lp (append body orelse rest) locals globals))
+      (((<function-def> ,id ,args ,body ,decos ,ret) . ,rest)
+       (lp rest (lset-adjoin eq? locals id) globals))
       ((,any . ,rest)
        (lp rest locals globals))
       (()
        (list (lset-difference eq? locals (append exclude globals)) globals)))))
 
+(define *keywords* `((True . (const #t)) (False . (const #f))))
+
 (define (test str)
   (let ((code ((@ (language python3 parse) read-python3) (open-input-string str))))
-  (display-ln code)
-  (compile-tree-il code '() '())))
+    (display-ln code)
+    (let ((tree-il (compile-tree-il code '() '())))
+      (unparse-tree-il tree-il))))
