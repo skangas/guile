@@ -152,7 +152,8 @@ PYTHON3_LANG_SOURCES = \
   language/python3/impl.scm			\
   language/python3/parse.scm			\
   language/python3/compile-tree-il.scm		\
-  language/python3/spec.scm
+  language/python3/spec.scm			\
+  language/python3/preprocessor.scm
 
 BRAINFUCK_LANG_SOURCES =			\
   language/brainfuck/parse.scm			\
