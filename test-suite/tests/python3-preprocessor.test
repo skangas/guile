@@ -1,0 +1,115 @@
+;; -*- mode: scheme -*-
+
+(define-module (test-suite test-python3)
+  :use-module (test-suite lib)
+  :use-module (language python3 preprocessor)
+  :use-module (ice-9 regex)
+  :use-module (ice-9 eval-string)
+  :use-module (srfi srfi-1)
+  :use-module (language python3 commons))
+
+(define string-insert (@@ (language python3 preprocessor) string-insert))
+(define string-delete (@@ (language python3 preprocessor) string-delete))
+
+(define convert-tabs (@@ (language python3 preprocessor) convert-tabs))
+
+(define *py-ind* "
+if foo:
+    if bar:
+        x = 42
+else:
+   print foo
+")
+
+(define *python-ex* (string-copy "
+
+if len(sys.argv) == 1:
+    print 'Usage: celsius temp1 temp2 ...'
+    sys.exit(0)
+
+# Loop over the arguments
+for i in sys.argv[1:]:
+    try: 
+\tfahrenheit=float(string.atoi(i))
+    except string.atoi_error:
+ \tprint(repr(i), \"not a # numeric value\")
+    else: #test
+        celsius=(fahrenheit-32)*5.0/9.0
+        print('%i\\260F = %i\\260C' % (int(fahrenheit), \\
+ int(celsius+.5)))
+
+month_names = ['Januari', 'Februari', 'Maart',      # These are the
+               'April',   'Mei',      'Juni',       # Dutch names
+               'Juli',    'Augustus', 'September',  # for the months
+               'Oktober', 'November', 'December']   # of the year
+
+def triple_quotes():
+   \"\"\"
+   testing a docstring
+   \"\"\"
+
+   print ''' testing another triple quote '''
+
+   print '''
+and
+now
+for
+multiline'''
+
+"))
+
+(define *python-ex2* (string-copy "
+
+month_names = ['Januari', 'Februari', 'Maart',      # These are the
+               'April',   'Mei',      'Juni',       # Dutch names
+               'Juli',    'Augustus', 'September',  # for the months
+               'Oktober', 'November', 'December']   # of the year
+
+def triple_quotes():
+   \"\"\"
+   testing a docstring
+   \"\"\"
+
+   print ''' testing another triple quote '''
+
+   print '''
+and
+now
+for
+multiline'''
+
+"))
+
+
+(with-test-prefix "Python 3 Preprocessor"
+
+  (pass-if "string-insert"
+    (and (string=? (string-insert "bar" 0 "foo") "foobar")
+         (string=? (string-insert "foo" 3 "bar") "foobar")
+         (string=? (string-insert "foobar" 3 "XX") "fooXXbar")
+         (string=? (string-insert "" 0 "ab") "ab")))
+
+  (pass-if "string-delete"
+    (and (string=? (string-delete "0123456789" 4 7) "0123789")))
+
+  (pass-if "convert-tabs"
+           (and (string=? (convert-tabs "
+if foo:
+    if bar:
+\tx = 42
+ \ty = 24
+ \t z = 11
+else:
+   print foo")
+                          "
+if foo:
+    if bar:
+        x = 42
+        y = 24
+         z = 11
+else:
+   print foo"
+                          )))
+
+  )
+

@@ -84,6 +84,8 @@ SCM_TESTS = tests/00-initial-env.test		\
 	    tests/popen-child.scm		\
 	    tests/ports.test			\
 	    tests/posix.test			\
+	    tests/python3-preprocessor.test	\
+	    tests/python3.test			\
 	    tests/q.test			\
 	    tests/r4rs.test			\
 	    tests/r5rs_pitfall.test		\
