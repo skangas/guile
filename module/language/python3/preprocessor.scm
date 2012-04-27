@@ -21,13 +21,11 @@
 
 ;;; Code:
 
-;; (define-module (language python3 preprocessor)
-;;   #:use-module (ice-9 pretty-print)
-;;   #:use-module (system base language)
-;;   #:export (preprocessor))
-
-(use-modules (ice-9 pretty-print)
-             (srfi srfi-1))
+(define-module (language python3 preprocessor)
+  #:use-module (ice-9 pretty-print)
+  #:use-module (system base language)
+  #:use-module (srfi srfi-1)
+  #:export (preprocessor))
 
 ;;; Python reads program text as Unicode code points
 ;; TODO Proper Unicode Support
@@ -192,7 +190,7 @@
         (dedent pos spaces (cdr stack))
         (list (next-logical-line pos) (cdr stack))))
 
-  (define (dedent-all (- 2 pos) stack)
+  (define (dedent-all pos stack)
     (if (= 0 (car stack))
         str
         (begin
