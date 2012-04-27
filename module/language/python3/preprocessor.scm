@@ -81,7 +81,7 @@
 ;; Remove all comments ;; FIXME: disallow comments after \
 
 ;; FIXME Make sure to delete crap at end of string after move
-(define* (kill-comments str)
+(define* (remove-comments str)
   (define (first-unquoted-hash str pos)
     (find-unquoted str #\# pos))
   (let recurse ((pos 0) (str str))
@@ -101,8 +101,8 @@
 
 ;; Count whitespace from pos, replace any tabs encountered s.t. we have multiple
 ;; of 8, stop when we are at a character that is neither space nor tab.
-(define (fix-tabs str)
-  (define (fix-tabs-at str pos)
+(define (convert-tabs str)
+  (define (convert-tabs-at str pos)
     (let* ((non-space (string-first-non-space str pos))
            (spaces (- non-space pos)))
       (if (eqv? (string-ref str non-space) #\tab)
@@ -113,7 +113,7 @@
           str)))
   (let fixer ((str str) (pos 0))
     (let ((fixed (or (and (>= pos (string-length str)) str)
-                     (fix-tabs-at str pos)))
+                     (convert-tabs-at str pos)))
           (eol (string-index str #\newline pos)))
       (if eol
           (fixer fixed (+ 1 eol))
@@ -138,7 +138,7 @@
 ;; generated. At the end of the file, a DEDENT token is generated for each
 ;; number remaining on the stack that is larger than zero.
 
-(define (add-indent-tokens str)  
+(define (add-newline-and-indent-tokens str)
   (define (put-token pos tok)
     (set! str (string-insert str pos tok))
     (+ pos (string-length tok)))
@@ -258,9 +258,9 @@
   str)
 
 (define (preprocessor str)
-  (add-indent-tokens
-   (fix-tabs
-    (kill-comments
+  (add-newline-and-indent-tokens
+   (convert-tabs
+    (remove-comments
      (handle-line-continuations 
       (convert-triple-quotes
        str))))))
