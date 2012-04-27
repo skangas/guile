@@ -23,7 +23,13 @@
 
 (define-module (language python3 commons)
   #:use-module (system base pmatch)
-  #:export (debug display-ln pzip replicate read-python-string load-file-dir))
+  #:export (debug display-ln pzip replicate read-python-string load-file-dir
+                  <indent-token> <dedent-token> <newline-token>))
+
+;; Various tokens
+(define <indent-token>  "#<INDENT>")
+(define <dedent-token>  "#<DEDENT>")
+(define <newline-token> "#<NEWLINE>")
 
 (define-syntax-rule (debug str rest ...)
   (let* ((csl (current-source-location))

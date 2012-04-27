@@ -22,9 +22,11 @@
 ;;; Code:
 
 (define-module (language python3 preprocessor)
-  #:use-module (ice-9 pretty-print)
   #:use-module (system base language)
+  #:use-module (ice-9 pretty-print)
+  #:use-module (ice-9 regex)
   #:use-module (srfi srfi-1)
+  #:use-module (language python3 commons)
   #:export (preprocessor))
 
 ;;; Python reads program text as Unicode code points
@@ -72,9 +74,6 @@
                     (find-unquoted str char (+ 1 next-pos))))))))
 
 ;; Token strings
-(define <indent>  "#<INDENT>")
-(define <dedent>  "#<DEDENT>")
-(define <newline> "#<NEWLINE>")
 
 ;; Remove all comments ;; FIXME: disallow comments after \
 
@@ -166,7 +165,7 @@
             (if (> (length tok-stack) 0)
                 (rec (+ 1 nl) tok-stack)
                 (and nl
-                     (put-token nl <newline>)))))))
+                     (put-token nl <newline-token>)))))))
 
   ;; 2.1.7 A logical line that contains only spaces, tabs, formfeeds and
   ;; possibly a comment, is ignored (i.e., no NEWLINE token is
@@ -181,11 +180,11 @@
           pos)))
 
   (define (indent pos spaces stack)
-    (set! pos (put-token (- 2 pos) <indent>))
+    (set! pos (put-token (- 2 pos) <indent-token>))
     (list (next-logical-line pos) (cons spaces stack)))
 
   (define (dedent pos spaces stack)
-    (set! pos (put-token pos <dedent>))
+    (set! pos (put-token pos <dedent-token>))
     (if (< spaces (cadr stack))
         (dedent pos spaces (cdr stack))
         (list (next-logical-line pos) (cdr stack))))
@@ -194,7 +193,7 @@
     (if (= 0 (car stack))
         str
         (begin
-          (set! pos (put-token pos <dedent>))
+          (set! pos (put-token pos <dedent-token>))
           (dedent-all pos (cdr stack)))))
 
   (let recurse ((pos 0) (pos-stack '(0)))
